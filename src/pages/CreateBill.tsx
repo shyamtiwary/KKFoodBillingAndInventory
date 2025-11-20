@@ -68,8 +68,8 @@ const CreateBill = () => {
     e.preventDefault();
     
     if (!customerName || !customerEmail) {
-      toast.error("Please fill in customer details");
-      return;
+      setCustomerName("Walk-in Customer");
+      setCustomerEmail("N/A");
     }
 
     if (items.some(item => !item.productId || item.quantity <= 0)) {
@@ -93,8 +93,8 @@ const CreateBill = () => {
     const newBill = {
       id: Date.now().toString(),
       billNumber: billManager.generateBillNumber(),
-      customerName,
-      customerEmail,
+      customerName: customerName == "" ? "Walk-in Customer" : customerName,
+      customerEmail: customerEmail == "" ? "N/A" : customerEmail,
       date: new Date().toISOString().split('T')[0],
       items: items.map(item => {
         const product = products.find(p => p.id === item.productId);

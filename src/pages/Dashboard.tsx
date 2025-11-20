@@ -152,7 +152,7 @@ bills.forEach(bill => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-3 overflow-y-auto max-h-32">
               {recentBills.map((bill) => (
                 <div
                   key={bill.id}
