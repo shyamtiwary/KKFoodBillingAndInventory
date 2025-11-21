@@ -93,11 +93,18 @@ const Inventory = () => {
     if (!editingProduct) return;
 
     const costPrice = parseFloat(editingProduct.costPrice.toString());
-    const sellPrice = parseFloat(editingProduct.costPrice.toString());
+    const sellPrice = parseFloat(editingProduct.sellPrice.toString()); // fixed: read sellPrice, not costPrice
     const stock = parseInt(editingProduct.stock.toString());
     const lowStockThreshold = parseInt(editingProduct.lowStockThreshold.toString());
 
-    if (!editingProduct.name || !editingProduct.sku || !editingProduct.category || isNaN(costPrice) ||isNaN(sellPrice) || isNaN(stock)) {
+    if (
+      !editingProduct.name ||
+      !editingProduct.sku ||
+      !editingProduct.category ||
+      isNaN(costPrice) ||
+      isNaN(sellPrice) ||
+      isNaN(stock)
+    ) {
       toast.error("Please fill in all required fields");
       return;
     }
