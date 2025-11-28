@@ -1,0 +1,12 @@
+[
+  {
+    "Id": "2",
+    "Name": "Samosa",
+    "Sku": "SAMOSA-001",
+    "Category": "Snacks",
+    "CostPrice": 5,
+    "SellPrice": 10,
+    "Stock": 1070,
+    "LowStockThreshold": 20
+  }
+]
