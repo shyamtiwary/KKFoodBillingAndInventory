@@ -1,6 +1,8 @@
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:55219';
+
 export const SERVICE_URLS = {
-    INVENTORY: 'https://kk-food-backend.onrender.com/api/Products',
-    BILLING: 'https://kk-food-backend.onrender.com/api/Bills',
-    AUTH: 'https://kk-food-backend.onrender.com/api/Auth',
+    INVENTORY: `${API_BASE_URL}/api/Products`,
+    BILLING: `${API_BASE_URL}/api/Bills`,
+    AUTH: `${API_BASE_URL}/api/Auth`,
 };
 
