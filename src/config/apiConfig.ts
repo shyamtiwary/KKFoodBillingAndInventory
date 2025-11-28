@@ -1,6 +1,6 @@
 export const SERVICE_URLS = {
-    INVENTORY: 'http://localhost:55219/api/Products',
-    BILLING: 'http://localhost:55219/api/Bills',
-    AUTH: 'http://localhost:55219/api/Auth',
+    INVENTORY: 'https://kk-food-backend.onrender.com/api/Products',
+    BILLING: 'https://kk-food-backend.onrender.com/api/Bills',
+    AUTH: 'https://kk-food-backend.onrender.com/api/Auth',
 };
 
