@@ -1,51 +1,80 @@
 import { Product, products as initialProducts } from '@/data/testData';
 
-const STORAGE_KEY = 'billflow_products';
+import { SERVICE_URLS } from '@/config/apiConfig';
+
+const API_URL = SERVICE_URLS.INVENTORY;
 
 export const productManager = {
-  // Initialize localStorage with test data if empty
-  initialize: () => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(initialProducts));
+  // Initialize with test data if the microservice is empty
+  initialize: async () => {
+    const response = await fetch(API_URL);
+    const products = await response.json();
+    if (products.length === 0) {
+      for (const product of initialProducts) {
+        await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(product),
+        });
+      }
     }
   },
 
   // Get all products
-  getAll: (): Product[] => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : initialProducts;
+  getAll: async (): Promise<Product[]> => {
+    try {
+      const response = await fetch(API_URL);
+
+      if (!response.ok) {
+        console.warn('Failed to fetch products, returning initial products.');
+        return initialProducts; // Return fallback data if the response is not OK
+      }
+
+      const data = await response.json(); // Parse the JSON response once
+      console.log('Fetching products from microservice:', data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      return initialProducts; // Return fallback data in case of an error
+    }
   },
 
   // Add a new product
-  add: (product: Product) => {
-    const products = productManager.getAll();
-    products.push(product);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-    return product;
+  add: async (product: Product): Promise<Product> => {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(product),
+    });
+    return await response.json();
   },
 
   // Update a product
-  update: (id: string, updatedProduct: Partial<Product>) => {
-    const products = productManager.getAll();
-    const index = products.findIndex(p => p.id === id);
-    if (index !== -1) {
-      products[index] = { ...products[index], ...updatedProduct };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-    }
-    return products[index];
+  update: async (id: string, updatedProduct: Partial<Product>): Promise<Product | undefined> => {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedProduct),
+    });
+    return response.ok ? await response.json() : undefined;
   },
 
   // Delete a product
-  delete: (id: string) => {
-    const products = productManager.getAll();
-    const filtered = products.filter(p => p.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+  delete: async (id: string): Promise<void> => {
+    await fetch(`${API_URL}/${id}`, {
+      method: 'DELETE',
+    });
   },
 
-  // Generate next product ID
-  generateId: (): string => {
-    const products = productManager.getAll();
+  // Generate next product ID (this may need to be handled by the microservice)
+  generateId: async (): Promise<string> => {
+    const products = await productManager.getAll();
     const maxId = products.reduce((max, product) => {
       const num = parseInt(product.id);
       return num > max ? num : max;

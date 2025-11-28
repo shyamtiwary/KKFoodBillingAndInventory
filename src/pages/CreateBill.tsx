@@ -25,9 +25,13 @@ const CreateBill = () => {
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    billManager.initialize();
-    productManager.initialize();
-    setProducts(productManager.getAll());
+    const fetchData = async () => {
+      billManager.initialize();
+      productManager.initialize();
+      const allProducts = await productManager.getAll();
+      setProducts(allProducts);
+    };
+    fetchData();
   }, []);
 
   const addItem = () => {
@@ -41,14 +45,14 @@ const CreateBill = () => {
   const updateItem = (index: number, field: keyof BillItem, value: string | number) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
-    
+
     if (field === "productId") {
       const product = products.find((p) => p.id === value);
       if (product) {
         newItems[index].price = product.sellPrice;
       }
     }
-    
+
     setItems(newItems);
   };
 
@@ -64,9 +68,9 @@ const CreateBill = () => {
     return calculateSubtotal() + calculateTax();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!customerName || !customerEmail) {
       setCustomerName("Walk-in Customer");
       setCustomerEmail("N/A");
@@ -77,22 +81,28 @@ const CreateBill = () => {
       return;
     }
 
-    // Check stock availability
+    // Check stock availability with aggregated quantities
+    const productQuantities = new Map<string, number>();
     for (const item of items) {
-      const product = products.find(p => p.id === item.productId);
+      const currentQty = productQuantities.get(item.productId) || 0;
+      productQuantities.set(item.productId, currentQty + item.quantity);
+    }
+
+    for (const [productId, totalQuantity] of productQuantities.entries()) {
+      const product = products.find(p => p.id === productId);
       if (!product) {
         toast.error("Product not found");
         return;
       }
-      if (product.stock < item.quantity) {
-        toast.error(`Insufficient stock for ${product.name}. Available: ${product.stock}`);
+      if (product.stock < totalQuantity) {
+        toast.error(`Insufficient stock for ${product.name}. Requested: ${totalQuantity}, Available: ${product.stock}`);
         return;
       }
     }
 
     const newBill = {
       id: Date.now().toString(),
-      billNumber: billManager.generateBillNumber(),
+      billNumber: await billManager.generateBillNumber(),
       customerName: customerName == "" ? "Walk-in Customer" : customerName,
       customerEmail: customerEmail == "" ? "N/A" : customerEmail,
       date: new Date().toISOString().split('T')[0],
@@ -124,7 +134,7 @@ const CreateBill = () => {
 
     billManager.add(newBill);
     toast.success(`Bill ${newBill.billNumber} created successfully! Stock updated.`);
-    
+
     // Navigate to bills page after short delay
     setTimeout(() => navigate('/bills'), 1000);
   };
@@ -174,7 +184,7 @@ const CreateBill = () => {
                   <CardTitle>Bill Items</CardTitle>
                   <Button type="button" onClick={addItem} size="sm">
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Item
+                    Add New Row
                   </Button>
                 </div>
               </CardHeader>
@@ -202,7 +212,7 @@ const CreateBill = () => {
                     <div className="w-24">
                       <Label>Quantity</Label>
                       <Input
-                       type="number"
+                        type="number"
                         step="0.01"
                         value={item.quantity}
                         onChange={(e) => updateItem(index, "quantity", parseFloat(e.target.value) || 0.00)}

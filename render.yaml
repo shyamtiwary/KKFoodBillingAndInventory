@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: kk-food-backend
+    runtime: docker
+    plan: free
+    buildCommand: cd backend/KKFoodBilling.Backend && dotnet publish -c Release -o ./publish
+    startCommand: cd backend/KKFoodBilling.Backend/publish && dotnet KKFoodBilling.Backend.dll --urls=http://0.0.0.0:10000
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000

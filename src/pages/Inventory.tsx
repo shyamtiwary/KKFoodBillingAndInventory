@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Select } from "@radix-ui/react-select";
 
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,12 +30,17 @@ const Inventory = () => {
     costPrice: "",
     sellPrice: "",
     stock: "",
-    lowStockThreshold: "10",
+    lowStockThreshold: "",
   });
 
   useEffect(() => {
-    productManager.initialize();
-    setProducts(productManager.getAll());
+    const fetchProducts = async () => {
+      productManager.initialize();
+      const allProducts = await productManager.getAll();
+      console.log("Fetched products:", allProducts);
+      setProducts(allProducts);
+    };
+    fetchProducts();
   }, []);
 
   const filteredProducts = products.filter(
@@ -46,25 +50,30 @@ const Inventory = () => {
       product.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getStockStatus = (product: Product) => {
-    if (product.stock === 0) return { label: 'Out of Stock', variant: 'destructive' as const };
-    if (product.stock <= product.lowStockThreshold) return { label: 'Low Stock', variant: 'outline' as const };
-    return { label: 'In Stock', variant: 'default' as const };
+  const refreshProducts = async () => {
+    const allProducts = await productManager.getAll();
+    setProducts(allProducts);
   };
 
-  const handleAddProduct = () => {
+  const getStockStatus = (product: Product) => {
+    if (product.stock === 0) return { label: "Out of Stock", variant: "destructive" as const };
+    if (product.stock <= product.lowStockThreshold) return { label: "Low Stock", variant: "outline" as const };
+    return { label: "In Stock", variant: "default" as const };
+  };
+
+  const handleAddProduct = async () => {
     const costPrice = parseFloat(newProduct.costPrice);
     const sellPrice = parseFloat(newProduct.sellPrice);
     const stock = parseInt(newProduct.stock);
-    const lowStockThreshold = parseInt(newProduct.lowStockThreshold);
+    const lowStockThreshold = newProduct.lowStockThreshold ? parseInt(newProduct.lowStockThreshold) : 10;
 
-    if (!newProduct.name || !newProduct.sku || !newProduct.category || isNaN(costPrice) ||isNaN(sellPrice) || isNaN(stock)) {
+    if (!newProduct.name || !newProduct.sku || !newProduct.category || isNaN(costPrice) || isNaN(sellPrice) || isNaN(stock)) {
       toast.error("Please fill in all required fields");
       return;
     }
 
     const product: Product = {
-      id: productManager.generateId(),
+      id: await productManager.generateId(),
       name: newProduct.name,
       sku: newProduct.sku,
       category: newProduct.category,
@@ -74,8 +83,8 @@ const Inventory = () => {
       lowStockThreshold,
     };
 
-    productManager.add(product);
-    setProducts(productManager.getAll());
+    const addedProduct = await productManager.add(product);
+    setProducts([...products, addedProduct]);
     setIsAddDialogOpen(false);
     setNewProduct({
       name: "",
@@ -84,32 +93,25 @@ const Inventory = () => {
       costPrice: "",
       sellPrice: "",
       stock: "",
-      lowStockThreshold: "10",
+      lowStockThreshold: "",
     });
     toast.success("Product added successfully");
   };
 
-  const handleEditProduct = () => {
+  const handleEditProduct = async () => {
     if (!editingProduct) return;
 
     const costPrice = parseFloat(editingProduct.costPrice.toString());
-    const sellPrice = parseFloat(editingProduct.sellPrice.toString()); // fixed: read sellPrice, not costPrice
+    const sellPrice = parseFloat(editingProduct.sellPrice.toString());
     const stock = parseInt(editingProduct.stock.toString());
     const lowStockThreshold = parseInt(editingProduct.lowStockThreshold.toString());
 
-    if (
-      !editingProduct.name ||
-      !editingProduct.sku ||
-      !editingProduct.category ||
-      isNaN(costPrice) ||
-      isNaN(sellPrice) ||
-      isNaN(stock)
-    ) {
+    if (!editingProduct.name || !editingProduct.sku || !editingProduct.category || isNaN(costPrice) || isNaN(sellPrice) || isNaN(stock)) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    productManager.update(editingProduct.id, {
+    const updated = await productManager.update(editingProduct.id, {
       name: editingProduct.name,
       sku: editingProduct.sku,
       category: editingProduct.category,
@@ -118,17 +120,30 @@ const Inventory = () => {
       stock,
       lowStockThreshold,
     });
-    setProducts(productManager.getAll());
+
+    if (updated) {
+      setProducts(products.map(p => p.id === updated.id ? updated : p));
+    } else {
+      await refreshProducts();
+    }
+
     setIsEditDialogOpen(false);
     setEditingProduct(null);
     toast.success("Product updated successfully");
   };
 
-  const handleDeleteProduct = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete "${name}"?`)) {
-      productManager.delete(id);
-      setProducts(productManager.getAll());
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
+  const handleDeleteClick = (product: Product) => {
+    setProductToDelete(product);
+  };
+
+  const confirmDelete = async () => {
+    if (productToDelete) {
+      await productManager.delete(productToDelete.id);
+      setProducts(products.filter(p => p.id !== productToDelete.id));
       toast.success("Product deleted successfully");
+      setProductToDelete(null);
     }
   };
 
@@ -139,16 +154,19 @@ const Inventory = () => {
 
   const handleExportInventoryCSV = () => {
     const csvHeader = "ID,SKU,Name,Category,Cost Price,Sell Price,Stock,Low Stock Threshold\n";
-    const csvRows = products.map(p => 
-      `${p.id},${p.sku},${p.name},${p.category},${p.costPrice},${p.sellPrice},${p.stock},${p.lowStockThreshold}`
-    ).join("\n");
-    
+    const csvRows = products
+      .map(
+        (p) =>
+          `${p.id},${p.sku},${p.name},${p.category},${p.costPrice},${p.sellPrice},${p.stock},${p.lowStockThreshold}`
+      )
+      .join("\n");
+
     const csvContent = csvHeader + csvRows;
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `inventory-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `inventory-${new Date().toISOString().split("T")[0]}.csv`);
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -219,7 +237,7 @@ const Inventory = () => {
                       <td className="py-3 px-4 text-right font-semibold">
                         ₹{product.costPrice.toFixed(2)}
                       </td>
-                       <td className="py-3 px-4 text-right font-semibold">
+                      <td className="py-3 px-4 text-right font-semibold">
                         ₹{product.sellPrice.toFixed(2)}
                       </td>
                       <td className="py-3 px-4 text-right">
@@ -228,7 +246,7 @@ const Inventory = () => {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <Badge 
+                        <Badge
                           variant={stockStatus.variant}
                           className={stockStatus.variant === 'default' ? 'bg-accent hover:bg-accent' : ''}
                         >
@@ -248,7 +266,7 @@ const Inventory = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDeleteProduct(product.id, product.name)}
+                            onClick={() => handleDeleteClick(product)}
                             className="h-8 w-8 text-destructive hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -329,7 +347,7 @@ const Inventory = () => {
                 />
               </div>
             </div>
-             <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="price">Sell Price ($)</Label>
                 <Input
@@ -422,7 +440,7 @@ const Inventory = () => {
                   />
                 </div>
               </div>
-               <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="edit-price">Selling Price ($)</Label>
                   <Input
@@ -462,6 +480,25 @@ const Inventory = () => {
               Cancel
             </Button>
             <Button onClick={handleEditProduct}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!productToDelete} onOpenChange={(open) => !open && setProductToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{productToDelete?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProductToDelete(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
