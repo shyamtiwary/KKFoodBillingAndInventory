@@ -20,6 +20,8 @@ builder.Services.AddSwaggerGen(c =>
 
 
 // Configure CORS
+builder.Services.AddCors(options =>
+{
     options.AddPolicy("AllowFrontend",
         policy =>
         {
