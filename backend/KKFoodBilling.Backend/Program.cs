@@ -28,7 +28,7 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(
                     "http://localhost:8080", 
                     "http://localhost:8081",
-                    "https://kkfoodbillingandinventory.vercel.app", // Production Vercel URL
+                    "https://kk-food-billing-and-inventory.vercel.app", // Production Vercel URL
                     "https://*.vercel.app" // Allow all Vercel preview deployments
                   )
                   .AllowAnyHeader()
