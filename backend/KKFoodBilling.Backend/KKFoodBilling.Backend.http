@@ -1,0 +1,6 @@
+@KKFoodBilling.Backend_HostAddress = http://localhost:5255
+
+GET {{KKFoodBilling.Backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,24 @@
+namespace KKFoodBilling.Backend.Models;
+
+public class Bill
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string BillNumber { get; set; } = string.Empty;
+    public string CustomerName { get; set; } = string.Empty;
+    public string CustomerEmail { get; set; } = string.Empty;
+    public string Date { get; set; } = string.Empty;
+    public List<BillItem> Items { get; set; } = new();
+    public decimal Subtotal { get; set; }
+    public decimal Tax { get; set; }
+    public decimal Total { get; set; }
+    public string Status { get; set; } = "paid";
+}
+
+public class BillItem
+{
+    public string ProductId { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public decimal Price { get; set; }
+    public decimal Total { get; set; }
+}

@@ -2,42 +2,64 @@ import { Bill, bills as initialBills } from '@/data/testData';
 
 const STORAGE_KEY = 'billflow_bills';
 
+import { SERVICE_URLS } from '@/config/apiConfig';
+
 export const billManager = {
-  // Initialize localStorage with test data if empty
+  // Initialize - no longer needed for API but kept for compatibility
   initialize: () => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(initialBills));
-    }
+    // No-op
   },
 
   // Get all bills
-  getAll: (): Bill[] => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : initialBills;
+  getAll: async (): Promise<Bill[]> => {
+    try {
+      const response = await fetch(SERVICE_URLS.BILLING);
+      if (!response.ok) {
+        console.warn('Failed to fetch bills, returning empty list.');
+        return [];
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching bills:', error);
+      return [];
+    }
   },
 
   // Add a new bill
-  add: (bill: Bill) => {
-    const bills = billManager.getAll();
-    bills.unshift(bill); // Add to beginning
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(bills));
-    return bill;
+  add: async (bill: Bill): Promise<Bill | undefined> => {
+    try {
+      const response = await fetch(SERVICE_URLS.BILLING, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bill),
+      });
+      return response.ok ? await response.json() : undefined;
+    } catch (error) {
+      console.error('Error adding bill:', error);
+      return undefined;
+    }
   },
 
   // Generate next bill number
-  generateBillNumber: (): string => {
-    const bills = billManager.getAll();
-    const maxNumber = bills.reduce((max, bill) => {
-      const num = parseInt(bill.billNumber.split('-')[1]);
-      return num > max ? num : max;
-    }, 0);
-    return `INV-${String(maxNumber + 1).padStart(3, '0')}`;
+  generateBillNumber: async (): Promise<string> => {
+    try {
+      const bills = await billManager.getAll();
+      const maxNumber = bills.reduce((max, bill) => {
+        const num = parseInt(bill.billNumber.split('-')[1]);
+        return num > max ? num : max;
+      }, 0);
+      return `INV-${String(maxNumber + 1).padStart(3, '0')}`;
+    } catch (error) {
+      console.error('Error generating bill number:', error);
+      return 'INV-001';
+    }
   },
 
   // Export bills as JSON
-  exportToJson: () => {
-    const bills = billManager.getAll();
+  exportToJson: async () => {
+    const bills = await billManager.getAll();
     const dataStr = JSON.stringify(bills, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);

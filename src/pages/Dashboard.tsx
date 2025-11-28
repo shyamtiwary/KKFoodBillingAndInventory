@@ -14,13 +14,20 @@ const Dashboard = () => {
   useEffect(() => {
     billManager.initialize();
     productManager.initialize();
-    setBills(billManager.getAll());
-    setProducts(productManager.getAll());
+
+    const fetchData = async () => {
+      const billsData = await billManager.getAll();
+      console.log('Dashboard fetched bills:', billsData);
+      setBills(billsData);
+      const productsData = await productManager.getAll();
+      setProducts(productsData);
+    };
+    fetchData();
   }, []);
 
   // Get today's date
   const today = new Date().toISOString().split('T')[0];
-  
+
   // Calculate daily sales (today)
   const todayBills = bills.filter(b => b.date === today);
   const dailySales = todayBills.reduce((sum, bill) => sum + bill.total, 0);
@@ -29,23 +36,23 @@ const Dashboard = () => {
   const totalProducts = products.length;
   const lowStockProducts = products.filter(p => p.stock <= p.lowStockThreshold);
   let costprice = 0;
-let profit = 0;
+  let profit = 0;
 
-bills.forEach(bill => {
-  let i = 0;
-  const product = products.find(p => p.name === bill.items[i]?.productName);
-  if (!product) return;
+  bills.forEach(bill => {
+    let i = 0;
+    const product = products.find(p => p.name === bill.items[i]?.productName);
+    if (!product) return;
 
-  const sp = product.sellPrice;
-  const cp = product.costPrice;
+    const sp = product.sellPrice;
+    const cp = product.costPrice;
 
-  if (bill.status === "paid") {
-    const totalQty = bill.items.reduce((sum, x) => sum + x.quantity, 0);
-    profit += (sp - cp) * totalQty;
-    costprice += cp * totalQty;
-  }
-   i++;
-});
+    if (bill.status === "paid") {
+      const totalQty = bill.items.reduce((sum, x) => sum + x.quantity, 0);
+      profit += (sp - cp) * totalQty;
+      costprice += cp * totalQty;
+    }
+    i++;
+  });
 
   const totalRevenue = bills
     .filter(b => b.status === 'paid')
@@ -89,7 +96,7 @@ bills.forEach(bill => {
           description="From paid invoices"
           variant="success"
         />
-         <StatCard
+        <StatCard
           title="Profit Revenue"
           value={`₹${profit.toFixed(2)}`}
           icon={IndianRupee}
@@ -169,8 +176,8 @@ bills.forEach(bill => {
                         bill.status === 'paid'
                           ? 'default'
                           : bill.status === 'overdue'
-                          ? 'destructive'
-                          : 'secondary'
+                            ? 'destructive'
+                            : 'secondary'
                       }
                       className={bill.status === 'paid' ? 'bg-accent hover:bg-accent' : ''}
                     >

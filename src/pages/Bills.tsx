@@ -21,8 +21,9 @@ const Bills = () => {
     loadBills();
   }, []);
 
-  const loadBills = () => {
-    setBills(billManager.getAll());
+  const loadBills = async () => {
+    const data = await billManager.getAll();
+    setBills(data);
   };
 
   const handleExportJson = () => {
@@ -32,16 +33,18 @@ const Bills = () => {
 
   const handleExportCSV = () => {
     const csvHeader = "Bill Number,Customer Name,Customer Email,Date,Subtotal,Tax,Total,Status\n";
-    const csvRows = bills.map(bill => 
-      `${bill.billNumber},${bill.customerName},${bill.customerEmail},${bill.date},${bill.subtotal},${bill.tax},${bill.total},${bill.status}`
-    ).join("\n");
-    
+    const csvRows = bills
+      .map(
+        (bill) =>
+          `${bill.billNumber},${bill.customerName},${bill.customerEmail},${bill.date},${bill.subtotal},${bill.tax},${bill.total},${bill.status}`
+      )
+      .join("\n");
     const csvContent = csvHeader + csvRows;
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `bills-${new Date().toISOString().split('T')[0]}.csv`);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `bills-${new Date().toISOString().split('T')[0]}.csv`;
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -49,93 +52,86 @@ const Bills = () => {
     toast.success("Bills exported to CSV file");
   };
 
-  const handleExportAllData = () => {
-    const products = productManager.getAll();
-    
-    // Create CSV for products
+  const handleExportAllData = async () => {
+    const products = await productManager.getAll();
+    // Products CSV
     const productsCsvHeader = "ID,SKU,Name,Category,Price,Stock,Low Stock Threshold\n";
-    const productsCsvRows = products.map(p => 
-      `${p.id},${p.sku},${p.name},${p.category},${p.sellPrice},${p.stock},${p.lowStockThreshold}`
-    ).join("\n");
+    const productsCsvRows = products
+      .map(
+        (p) => `${p.id},${p.sku},${p.name},${p.category},${p.sellPrice},${p.stock},${p.lowStockThreshold}`
+      )
+      .join("\n");
     const productsCsv = productsCsvHeader + productsCsvRows;
-    
-    // Create CSV for bills
-    const billsCsvHeader = "Bill Number,Customer Name,Customer Email,Date,Subtotal,Tax,Total,Status\n";
-    const billsCsvRows = bills.map(bill => 
-      `${bill.billNumber},${bill.customerName},${bill.customerEmail},${bill.date},${bill.subtotal},${bill.tax},${bill.total},${bill.status}`
-    ).join("\n");
-    const billsCsv = billsCsvHeader + billsCsvRows;
-    
-    // Download products CSV
     const productsBlob = new Blob([productsCsv], { type: "text/csv;charset=utf-8;" });
-    const productsLink = document.createElement("a");
     const productsUrl = URL.createObjectURL(productsBlob);
-    productsLink.setAttribute("href", productsUrl);
-    productsLink.setAttribute("download", `inventory-${new Date().toISOString().split('T')[0]}.csv`);
+    const productsLink = document.createElement("a");
+    productsLink.href = productsUrl;
+    productsLink.download = `inventory-${new Date().toISOString().split('T')[0]}.csv`;
     productsLink.style.visibility = "hidden";
     document.body.appendChild(productsLink);
     productsLink.click();
     document.body.removeChild(productsLink);
-    
-    // Download bills CSV
-    setTimeout(() => {
-      const billsBlob = new Blob([billsCsv], { type: "text/csv;charset=utf-8;" });
-      const billsLink = document.createElement("a");
-      const billsUrl = URL.createObjectURL(billsBlob);
-      billsLink.setAttribute("href", billsUrl);
-      billsLink.setAttribute("download", `bills-${new Date().toISOString().split('T')[0]}.csv`);
-      billsLink.style.visibility = "hidden";
-      document.body.appendChild(billsLink);
-      billsLink.click();
-      document.body.removeChild(billsLink);
-      toast.success("All data exported (Inventory + Bills)");
-    }, 300);
+
+    // Bills CSV
+    const billsCsvHeader = "Bill Number,Customer Name,Customer Email,Date,Subtotal,Tax,Total,Status\n";
+    const billsCsvRows = bills
+      .map(
+        (bill) =>
+          `${bill.billNumber},${bill.customerName},${bill.customerEmail},${bill.date},${bill.subtotal},${bill.tax},${bill.total},${bill.status}`
+      )
+      .join("\n");
+    const billsCsv = billsCsvHeader + billsCsvRows;
+    const billsBlob = new Blob([billsCsv], { type: "text/csv;charset=utf-8;" });
+    const billsUrl = URL.createObjectURL(billsBlob);
+    const billsLink = document.createElement("a");
+    billsLink.href = billsUrl;
+    billsLink.download = `bills-${new Date().toISOString().split('T')[0]}.csv`;
+    billsLink.style.visibility = "hidden";
+    document.body.appendChild(billsLink);
+    billsLink.click();
+    document.body.removeChild(billsLink);
+
+    toast.success("All data exported (Inventory + Bills)");
   };
 
   const handleDownloadPDF = (bill: Bill) => {
     const doc = new jsPDF();
-    
-    // Add title
+    // Title
     doc.setFontSize(20);
     doc.text("INVOICE", 105, 20, { align: "center" });
-    
-    // Add bill details
+    // Bill details
     doc.setFontSize(12);
     doc.text(`Bill Number: ${bill.billNumber}`, 20, 40);
     doc.text(`Date: ${new Date(bill.date).toLocaleDateString()}`, 20, 50);
     doc.text(`Status: ${bill.status.toUpperCase()}`, 20, 60);
-    
     // Customer info
     doc.setFontSize(14);
     doc.text("Bill To:", 20, 80);
     doc.setFontSize(12);
     doc.text(bill.customerName, 20, 90);
     doc.text(bill.customerEmail, 20, 100);
-    
     // Items table
-    const tableData = bill.items.map(item => [
+    const tableData = bill.items.map((item) => [
       item.productName,
       item.quantity.toString(),
       `₹${item.price.toFixed(2)}`,
-      `₹${item.total.toFixed(2)}`
+      `₹${item.total.toFixed(2)}`,
     ]);
-    
     autoTable(doc, {
       startY: 115,
-      head: [['Product', 'Quantity', 'Price', 'Total']],
+      head: [["Product", "Quantity", "Price", "Total"]],
       body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] }
+      theme: "grid",
+      headStyles: { fillColor: [59, 130, 246] },
     });
-    
-    // Add totals
+    // Totals
     const lastAutoTable = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable;
     const finalY = lastAutoTable && typeof lastAutoTable.finalY === "number" ? lastAutoTable.finalY : 115;
+    doc.setFontSize(12);
     doc.text(`Subtotal: ₹${bill.subtotal.toFixed(2)}`, 140, finalY + 15);
     doc.text(`Tax (10%): ₹${bill.tax.toFixed(2)}`, 140, finalY + 25);
     doc.setFontSize(14);
     doc.text(`Total: ₹${bill.total.toFixed(2)}`, 140, finalY + 35);
-    
     // Save PDF
     doc.save(`invoice-${bill.billNumber}.pdf`);
     toast.success("PDF downloaded successfully");
@@ -151,10 +147,8 @@ const Bills = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Bills & Invoices</h1>
-        <p className="text-muted-foreground mt-1">
-          View and manage all your bills
-        </p>
+        <h1 className="text-3xl font-bold">Bills &amp; Invoices</h1>
+        <p className="text-muted-foreground mt-1">View and manage all your bills</p>
       </div>
 
       <Card>
@@ -203,9 +197,7 @@ const Bills = () => {
               <tbody>
                 {filteredBills.map((bill) => (
                   <tr key={bill.id} className="border-b hover:bg-muted/50 transition-colors">
-                    <td className="py-3 px-4">
-                      <span className="font-mono font-semibold">{bill.billNumber}</span>
-                    </td>
+                    <td className="py-3 px-4"><span className="font-mono font-semibold">{bill.billNumber}</span></td>
                     <td className="py-3 px-4">
                       <div>
                         <p className="font-medium">{bill.customerName}</p>
@@ -213,23 +205,17 @@ const Bills = () => {
                       </div>
                     </td>
                     <td className="py-3 px-4 text-muted-foreground">
-                      {new Date(bill.date).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
+                      {new Date(bill.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                     </td>
-                    <td className="py-3 px-4 text-right font-semibold">
-                      ₹{bill.total.toFixed(2)}
-                    </td>
+                    <td className="py-3 px-4 text-right font-semibold">₹{bill.total.toFixed(2)}</td>
                     <td className="py-3 px-4 text-center">
                       <Badge
                         variant={
                           bill.status === 'paid'
                             ? 'default'
                             : bill.status === 'overdue'
-                            ? 'destructive'
-                            : 'secondary'
+                              ? 'destructive'
+                              : 'secondary'
                         }
                         className={bill.status === 'paid' ? 'bg-accent hover:bg-accent' : ''}
                       >
@@ -238,12 +224,7 @@ const Bills = () => {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleDownloadPDF(bill)}
-                          title="Download PDF"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => handleDownloadPDF(bill)} title="Download PDF">
                           <Download className="h-4 w-4" />
                         </Button>
                       </div>

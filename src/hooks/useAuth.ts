@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { SERVICE_URLS } from '@/config/apiConfig';
 
 export type UserRole = 'admin' | 'manager' | 'staff';
 
@@ -26,21 +27,27 @@ export const useAuth = () => {
     setIsLoading(false);
   }, []);
 
-  const login = (email: string, password: string): boolean => {
-    // Mock authentication - replace with real auth later
-    const mockUsers: Record<string, User> = {
-      'admin': { email: 'admin', role: 'admin', name: 'Admin User' },
-      'manager': { email: 'manager', role: 'manager', name: 'Manager User' },
-      'staff': { email: 'staff', role: 'staff', name: 'Staff User' },
-    };
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${SERVICE_URLS.AUTH}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const user = mockUsers[email];
-    if (user && password === 'password') {
-      setUser(user);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      return true;
+      if (response.ok) {
+        const user = await response.json();
+        setUser(user);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
