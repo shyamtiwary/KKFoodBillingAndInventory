@@ -20,19 +20,22 @@ builder.Services.AddSwaggerGen(c =>
 
 
 // Configure CORS
-builder.Services.AddCors(options =>
-{
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins(
-                    "http://localhost:8080", 
-                    "http://localhost:8081",
-                    "https://kk-food-billing-and-inventory.vercel.app", // Production Vercel URL
-                    "https://*.vercel.app" // Allow all Vercel preview deployments
-                  )
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
+            policy.SetIsOriginAllowed(origin => 
+                {
+                    var uri = new Uri(origin);
+                    // Allow localhost
+                    if (uri.Host == "localhost") return true;
+                    // Allow specific production domain
+                    if (origin == "https://kk-food-billing-and-inventory.vercel.app") return true;
+                    // Allow any vercel.app subdomain (for previews)
+                    if (uri.Host.EndsWith(".vercel.app")) return true;
+                    return false;
+                })
+                .AllowAnyHeader()
+                .AllowAnyMethod();
         });
 });
 
