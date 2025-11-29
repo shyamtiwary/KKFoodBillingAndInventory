@@ -229,6 +229,7 @@ const Bills = () => {
                 <tr className="border-b">
                   <th className="text-left py-3 px-4 font-semibold">Bill #</th>
                   <th className="text-left py-3 px-4 font-semibold">Customer</th>
+                  <th className="text-left py-3 px-4 font-semibold">Created By</th>
                   <th className="text-left py-3 px-4 font-semibold">Date</th>
                   <th className="text-right py-3 px-4 font-semibold">Amount</th>
                   <th className="text-center py-3 px-4 font-semibold">Status</th>
@@ -244,6 +245,9 @@ const Bills = () => {
                         <p className="font-medium">{bill.customerName}</p>
                         <p className="text-sm text-muted-foreground">{bill.customerEmail}</p>
                       </div>
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      {bill.createdBy || "Unknown"}
                     </td>
                     <td className="py-3 px-4 text-muted-foreground">
                       {new Date(bill.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}

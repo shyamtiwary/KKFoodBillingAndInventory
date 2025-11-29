@@ -14,19 +14,28 @@ export const billManager = {
   getAll: async (): Promise<Bill[]> => {
     try {
       const response = await fetch(SERVICE_URLS.BILLING);
-      if (!response.ok) {
-        console.warn('Failed to fetch bills, returning empty list.');
-        return [];
+      if (response.ok) {
+        const bills = await response.json();
+        // Update local storage with latest from server
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(bills));
+        return bills;
       }
-      return await response.json();
     } catch (error) {
-      console.error('Error fetching bills:', error);
-      return [];
+      console.warn('API offline, falling back to local storage for bills.');
     }
+
+    // Fallback to local storage
+    const storedBills = localStorage.getItem(STORAGE_KEY);
+    return storedBills ? JSON.parse(storedBills) : [];
   },
 
   // Add a new bill
   add: async (bill: Bill): Promise<Bill | undefined> => {
+    // Always save to local storage first for immediate UI update and offline support
+    const bills = await billManager.getAll();
+    const updatedBills = [...bills, bill];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedBills));
+
     try {
       const response = await fetch(SERVICE_URLS.BILLING, {
         method: 'POST',
@@ -35,10 +44,10 @@ export const billManager = {
         },
         body: JSON.stringify(bill),
       });
-      return response.ok ? await response.json() : undefined;
+      return response.ok ? await response.json() : bill;
     } catch (error) {
-      console.error('Error adding bill:', error);
-      return undefined;
+      console.warn('API offline, bill saved locally only.');
+      return bill;
     }
   },
 

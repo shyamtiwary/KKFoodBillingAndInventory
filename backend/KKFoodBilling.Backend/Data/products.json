@@ -6,7 +6,7 @@
     "Category": "FMCG",
     "CostPrice": 1000,
     "SellPrice": 1200,
-    "Stock": 18.5,
+    "Stock": 15,
     "LowStockThreshold": 10
   }
 ]
