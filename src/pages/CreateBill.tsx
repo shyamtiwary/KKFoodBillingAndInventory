@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { billManager } from "@/lib/billManager";
 import { productManager } from "@/lib/productManager";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 import { useAuth } from "@/hooks/useAuth";
 
