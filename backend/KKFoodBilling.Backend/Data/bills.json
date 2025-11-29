@@ -1,1 +1,25 @@
-[]
+[
+  {
+    "Id": "1764409340350",
+    "BillNumber": "INV-001",
+    "CustomerName": "Test Decimal Customer",
+    "CustomerEmail": "N/A",
+    "Date": "2025-11-29",
+    "Items": [
+      {
+        "ProductId": "1",
+        "ProductName": "Kaju",
+        "Quantity": 1.5,
+        "Price": 1200,
+        "Total": 1800
+      }
+    ],
+    "Subtotal": 1800,
+    "DiscountAmount": 180,
+    "DiscountPercentage": 10,
+    "TaxAmount": 0,
+    "Total": 1620,
+    "Status": "paid",
+    "CreatedBy": "Admin"
+  }
+]
