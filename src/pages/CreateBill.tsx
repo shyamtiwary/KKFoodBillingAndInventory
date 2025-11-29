@@ -21,8 +21,9 @@ const CreateBill = () => {
   const navigate = useNavigate();
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [items, setItems] = useState<BillItem[]>([{ productId: "", quantity: 1, price: 0 }]);
+  const [items, setItems] = useState<BillItem[]>([{ productId: "", quantity: 0, price: 0 }]); // Start with 0 quantity
   const [products, setProducts] = useState<Product[]>([]);
+  const [discountPercentage, setDiscountPercentage] = useState<number>(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,7 +36,7 @@ const CreateBill = () => {
   }, []);
 
   const addItem = () => {
-    setItems([...items, { productId: "", quantity: 1, price: 0 }]);
+    setItems([...items, { productId: "", quantity: 0, price: 0 }]);
   };
 
   const removeItem = (index: number) => {
@@ -44,7 +45,32 @@ const CreateBill = () => {
 
   const updateItem = (index: number, field: keyof BillItem, value: string | number) => {
     const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
+
+    // Handle decimal input for quantity
+    if (field === "quantity") {
+      // Allow empty string or valid number
+      if (value === "" || value === ".") {
+        // @ts-ignore - temporary allow string for input handling
+        newItems[index] = { ...newItems[index], [field]: value };
+      } else {
+        const numValue = parseFloat(value.toString());
+        if (!isNaN(numValue) && numValue >= 0) {
+          newItems[index] = { ...newItems[index], [field]: numValue };
+        }
+      }
+
+      // Auto-add new row if last row's quantity is changed and > 0
+      if (index === items.length - 1 && parseFloat(value.toString()) > 0) {
+        // Debounce check could be added here if needed, but simple check works for now
+        // We'll add a new row only if the current last row has a product selected too
+        if (newItems[index].productId) {
+          setTimeout(() => addItem(), 100); // Small delay to avoid render loop issues
+        }
+      }
+
+    } else {
+      newItems[index] = { ...newItems[index], [field]: value };
+    }
 
     if (field === "productId") {
       const product = products.find((p) => p.id === value);
@@ -57,15 +83,22 @@ const CreateBill = () => {
   };
 
   const calculateSubtotal = () => {
-    return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    return items.reduce((sum, item) => {
+      const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) || 0 : item.quantity;
+      return sum + item.price * qty;
+    }, 0);
+  };
+
+  const calculateDiscountAmount = () => {
+    return (calculateSubtotal() * discountPercentage) / 100;
   };
 
   const calculateTax = () => {
-    return calculateSubtotal() * 0.0; // 10% tax
+    return (calculateSubtotal() - calculateDiscountAmount()) * 0.0; // 0% tax for now
   };
 
   const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax();
+    return calculateSubtotal() - calculateDiscountAmount() + calculateTax();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,16 +109,20 @@ const CreateBill = () => {
       setCustomerEmail("N/A");
     }
 
-    if (items.some(item => !item.productId || item.quantity <= 0)) {
-      toast.error("Please complete all bill items");
+    // Filter out empty rows (no product or 0 quantity)
+    const validItems = items.filter(item => item.productId && (typeof item.quantity === 'number' ? item.quantity > 0 : parseFloat(item.quantity) > 0));
+
+    if (validItems.length === 0) {
+      toast.error("Please add at least one valid item");
       return;
     }
 
     // Check stock availability with aggregated quantities
     const productQuantities = new Map<string, number>();
-    for (const item of items) {
+    for (const item of validItems) {
+      const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
       const currentQty = productQuantities.get(item.productId) || 0;
-      productQuantities.set(item.productId, currentQty + item.quantity);
+      productQuantities.set(item.productId, currentQty + qty);
     }
 
     for (const [productId, totalQuantity] of productQuantities.entries()) {
@@ -100,34 +137,45 @@ const CreateBill = () => {
       }
     }
 
+    const subtotal = calculateSubtotal();
+    const discountAmount = calculateDiscountAmount();
+    const tax = calculateTax();
+    const total = calculateTotal();
+
     const newBill = {
       id: Date.now().toString(),
       billNumber: await billManager.generateBillNumber(),
       customerName: customerName == "" ? "Walk-in Customer" : customerName,
       customerEmail: customerEmail == "" ? "N/A" : customerEmail,
       date: new Date().toISOString().split('T')[0],
-      items: items.map(item => {
+      items: validItems.map(item => {
         const product = products.find(p => p.id === item.productId);
+        const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
         return {
           productId: item.productId,
           productName: product?.name || "",
-          quantity: item.quantity,
+          quantity: qty,
           price: item.price,
-          total: item.price * item.quantity,
+          total: item.price * qty,
         };
       }),
-      subtotal: calculateSubtotal(),
-      tax: calculateTax(),
-      total: calculateTotal(),
+      subtotal,
+      discountPercentage,
+      discountAmount,
+      taxAmount: tax, // Map to backend TaxAmount
+      tax, // Keep for frontend compatibility if needed, or remove if strictly following backend model
+      total,
       status: 'paid' as const,
+      createdBy: "Admin" // Placeholder for now, will implement auth later
     };
 
     // Update stock for each product
-    items.forEach(item => {
+    validItems.forEach(item => {
       const product = products.find(p => p.id === item.productId);
       if (product) {
+        const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
         productManager.update(item.productId, {
-          stock: product.stock - item.quantity
+          stock: product.stock - qty
         });
       }
     });
@@ -203,7 +251,7 @@ const CreateBill = () => {
                         <SelectContent>
                           {products.map((product) => (
                             <SelectItem key={product.id} value={product.id}>
-                              {product.name} in stock {product.stock} - ₹{product.sellPrice.toFixed(2)}
+                              {product.name} (Stock: {product.stock}) - ₹{product.sellPrice.toFixed(2)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -212,10 +260,10 @@ const CreateBill = () => {
                     <div className="w-24">
                       <Label>Quantity</Label>
                       <Input
-                        type="number"
-                        step="0.01"
+                        type="text" // Use text to allow "1." intermediate state
+                        inputMode="decimal"
                         value={item.quantity}
-                        onChange={(e) => updateItem(index, "quantity", parseFloat(e.target.value) || 0.00)}
+                        onChange={(e) => updateItem(index, "quantity", e.target.value)}
                       />
                     </div>
                     <div className="w-32">
@@ -224,7 +272,7 @@ const CreateBill = () => {
                     </div>
                     <div className="w-32">
                       <Label>Total</Label>
-                      <Input value={`₹${(item.price * item.quantity).toFixed(2)}`} disabled />
+                      <Input value={`₹${(item.price * (typeof item.quantity === 'string' ? parseFloat(item.quantity) || 0 : item.quantity)).toFixed(2)}`} disabled />
                     </div>
                     {items.length > 1 && (
                       <Button
@@ -253,6 +301,23 @@ const CreateBill = () => {
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="font-medium">₹{calculateSubtotal().toFixed(2)}</span>
                   </div>
+
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Discount (%)</span>
+                    <Input
+                      type="number"
+                      className="w-20 h-8 text-right"
+                      min="0"
+                      max="100"
+                      value={discountPercentage}
+                      onChange={(e) => setDiscountPercentage(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span className="text-muted-foreground">Discount Amount</span>
+                    <span className="font-medium">-₹{calculateDiscountAmount().toFixed(2)}</span>
+                  </div>
+
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Tax (0%)</span>
                     <span className="font-medium">₹{calculateTax().toFixed(2)}</span>

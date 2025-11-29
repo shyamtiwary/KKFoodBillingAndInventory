@@ -8,6 +8,6 @@ public class Product
     public string Category { get; set; } = string.Empty;
     public decimal CostPrice { get; set; }
     public decimal SellPrice { get; set; }
-    public int Stock { get; set; }
+    public decimal Stock { get; set; }
     public int LowStockThreshold { get; set; }
 }

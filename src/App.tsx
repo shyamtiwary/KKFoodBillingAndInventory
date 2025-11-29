@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Inventory from "./pages/Inventory";
 import Bills from "./pages/Bills";
 import CreateBill from "./pages/CreateBill";
+import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./hooks/useAuth";
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="inventory" element={<Inventory />} />
             <Route path="bills" element={<Bills />} />
             <Route path="create-bill" element={<CreateBill />} />
+            <Route path="reports" element={<Reports />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

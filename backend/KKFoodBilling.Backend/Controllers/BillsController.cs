@@ -11,9 +11,25 @@ public class BillsController : ControllerBase
     private const string FileName = "bills.json";
 
     [HttpGet]
-    public ActionResult<IEnumerable<Bill>> Get()
+    public ActionResult<IEnumerable<Bill>> Get([FromQuery] string? startDate, [FromQuery] string? endDate)
     {
         var bills = JsonFileHelper.GetData<Bill>(FileName);
+        
+        if (!string.IsNullOrEmpty(startDate) && !string.IsNullOrEmpty(endDate))
+        {
+            if (DateTime.TryParse(startDate, out var start) && DateTime.TryParse(endDate, out var end))
+            {
+                bills = bills.Where(b => 
+                {
+                    if (DateTime.TryParse(b.Date, out var billDate))
+                    {
+                        return billDate >= start && billDate <= end;
+                    }
+                    return false;
+                }).ToList();
+            }
+        }
+        
         return Ok(bills);
     }
 

@@ -67,6 +67,7 @@ public class ProductsController : ControllerBase
             product.SellPrice = updatedProduct.SellPrice;
         }
         // Stock can be 0, so always update it
+        // Note: Stock is now decimal to allow fractional quantities
         product.Stock = updatedProduct.Stock;
         
         if (updatedProduct.LowStockThreshold > 0)

@@ -21,9 +21,33 @@ const Bills = () => {
     loadBills();
   }, []);
 
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  useEffect(() => {
+    billManager.initialize();
+    loadBills();
+  }, []);
+
   const loadBills = async () => {
-    const data = await billManager.getAll();
-    setBills(data);
+    // If date filter is applied, we need to fetch from backend directly or update billManager to support it
+    // For now, let's fetch directly from API if dates are present, otherwise use billManager
+    if (startDate && endDate) {
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:55219';
+        const response = await fetch(`${API_BASE_URL}/api/Bills?startDate=${startDate}&endDate=${endDate}`);
+        if (response.ok) {
+          const data = await response.json();
+          setBills(data);
+        }
+      } catch (error) {
+        console.error("Error fetching filtered bills", error);
+        toast.error("Failed to fetch filtered bills");
+      }
+    } else {
+      const data = await billManager.getAll();
+      setBills(data);
+    }
   };
 
   const handleExportJson = () => {
@@ -153,17 +177,35 @@ const Bills = () => {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by bill number, customer name, or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by bill number, customer name, or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-2 items-center">
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-auto"
+                />
+                <span className="text-muted-foreground">-</span>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-auto"
+                />
+                <Button variant="secondary" onClick={() => loadBills()}>Apply Filter</Button>
+              </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={handleExportCSV}>
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
                 Export CSV

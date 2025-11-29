@@ -1,12 +1,1 @@
-[
-  {
-    "Id": "2",
-    "Name": "Samosa",
-    "Sku": "SAMOSA-001",
-    "Category": "Snacks",
-    "CostPrice": 5,
-    "SellPrice": 10,
-    "Stock": 1180,
-    "LowStockThreshold": 20
-  }
-]
+[]

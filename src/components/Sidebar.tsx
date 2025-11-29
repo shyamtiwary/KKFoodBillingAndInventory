@@ -30,6 +30,12 @@ const navItems = [
     icon: Plus,
     roles: ['admin', 'manager', 'staff'] as UserRole[],
   },
+  {
+    title: "Reports",
+    href: "/reports",
+    icon: FileText,
+    roles: ['admin', 'manager'] as UserRole[],
+  },
 ];
 
 export const Sidebar = () => {
@@ -40,7 +46,7 @@ export const Sidebar = () => {
     logout();
     navigate('/login');
   };
-  const filteredNavItems = navItems.filter(item => 
+  const filteredNavItems = navItems.filter(item =>
     user && item.roles.includes(user.role)
   );
 
