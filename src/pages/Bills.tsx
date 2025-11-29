@@ -170,62 +170,61 @@ const Bills = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Bills &amp; Invoices</h1>
-        <p className="text-muted-foreground mt-1">View and manage all your bills</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Bills & Invoices</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage and view all your bills
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportAllData}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Export All Data
+          </Button>
+          <Link to="/create-bill">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Bill
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by bill number, customer name, or email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex gap-2 items-center">
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-auto"
-                />
-                <span className="text-muted-foreground">-</span>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-auto"
-                />
-                <Button variant="secondary" onClick={() => loadBills()}>Apply Filter</Button>
-              </div>
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search bills..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={handleExportCSV}>
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Export CSV
+            <div className="flex flex-col md:flex-row gap-2">
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full md:w-auto"
+              />
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full md:w-auto"
+              />
+              <Button variant="secondary" onClick={loadBills}>
+                Filter
               </Button>
-              <Button variant="outline" onClick={handleExportAllData}>
-                <Download className="h-4 w-4 mr-2" />
-                Export All Data
-              </Button>
-              <Link to="/create-bill">
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Bill
-                </Button>
-              </Link>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[800px]">
               <thead>
                 <tr className="border-b">
                   <th className="text-left py-3 px-4 font-semibold">Bill #</th>

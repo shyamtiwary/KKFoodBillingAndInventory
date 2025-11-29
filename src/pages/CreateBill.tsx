@@ -238,8 +238,8 @@ const CreateBill = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {items.map((item, index) => (
-                  <div key={index} className="flex gap-4 items-end">
-                    <div className="flex-1">
+                  <div key={index} className="flex flex-col md:flex-row gap-4 items-start md:items-end border-b md:border-0 pb-4 md:pb-0 last:border-0">
+                    <div className="flex-1 w-full">
                       <Label>Product</Label>
                       <Select
                         value={item.productId}
@@ -257,7 +257,7 @@ const CreateBill = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="w-24">
+                    <div className="w-full md:w-24">
                       <Label>Quantity</Label>
                       <Input
                         type="text" // Use text to allow "1." intermediate state
@@ -266,11 +266,11 @@ const CreateBill = () => {
                         onChange={(e) => updateItem(index, "quantity", e.target.value)}
                       />
                     </div>
-                    <div className="w-32">
+                    <div className="w-full md:w-32">
                       <Label>Price</Label>
                       <Input value={`₹${item.price.toFixed(2)}`} disabled />
                     </div>
-                    <div className="w-32">
+                    <div className="w-full md:w-32">
                       <Label>Total</Label>
                       <Input value={`₹${(item.price * (typeof item.quantity === 'string' ? parseFloat(item.quantity) || 0 : item.quantity)).toFixed(2)}`} disabled />
                     </div>
@@ -279,6 +279,7 @@ const CreateBill = () => {
                         type="button"
                         variant="ghost"
                         size="icon"
+                        className="self-end md:self-auto"
                         onClick={() => removeItem(index)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
