@@ -10,20 +10,22 @@ import { toast } from "sonner";
 import { billManager } from "@/lib/billManager";
 import { productManager } from "@/lib/productManager";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 interface BillItem {
   productId: string;
-  quantity: number;
+  quantity: number | string;
   price: number;
 }
 
 const CreateBill = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [items, setItems] = useState<BillItem[]>([{ productId: "", quantity: 0, price: 0 }]); // Start with 0 quantity
   const [products, setProducts] = useState<Product[]>([]);
-  const [discountPercentage, setDiscountPercentage] = useState<number>(0);
+  const [discountAmount, setDiscountAmount] = useState<number>(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -48,23 +50,17 @@ const CreateBill = () => {
 
     // Handle decimal input for quantity
     if (field === "quantity") {
-      // Allow empty string or valid number
-      if (value === "" || value === ".") {
-        // @ts-ignore - temporary allow string for input handling
+      // Allow valid number or empty string
+      if (value === "" || /^\d*\.?\d*$/.test(value.toString())) {
         newItems[index] = { ...newItems[index], [field]: value };
-      } else {
-        const numValue = parseFloat(value.toString());
-        if (!isNaN(numValue) && numValue >= 0) {
-          newItems[index] = { ...newItems[index], [field]: numValue };
-        }
       }
 
       // Auto-add new row if last row's quantity is changed and > 0
-      if (index === items.length - 1 && parseFloat(value.toString()) > 0) {
-        // Debounce check could be added here if needed, but simple check works for now
+      const numValue = parseFloat(value.toString());
+      if (index === items.length - 1 && !isNaN(numValue) && numValue > 0) {
         // We'll add a new row only if the current last row has a product selected too
         if (newItems[index].productId) {
-          setTimeout(() => addItem(), 100); // Small delay to avoid render loop issues
+          newItems.push({ productId: "", quantity: 0, price: 0 });
         }
       }
 
@@ -89,16 +85,10 @@ const CreateBill = () => {
     }, 0);
   };
 
-  const calculateDiscountAmount = () => {
-    return (calculateSubtotal() * discountPercentage) / 100;
-  };
-
-  const calculateTax = () => {
-    return (calculateSubtotal() - calculateDiscountAmount()) * 0.0; // 0% tax for now
-  };
-
   const calculateTotal = () => {
-    return calculateSubtotal() - calculateDiscountAmount() + calculateTax();
+    const subtotal = calculateSubtotal();
+    const tax = (subtotal - discountAmount) * 0.0; // 0% tax
+    return subtotal - discountAmount + tax;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,8 +128,7 @@ const CreateBill = () => {
     }
 
     const subtotal = calculateSubtotal();
-    const discountAmount = calculateDiscountAmount();
-    const tax = calculateTax();
+    const tax = (subtotal - discountAmount) * 0.0;
     const total = calculateTotal();
 
     const newBill = {
@@ -160,13 +149,12 @@ const CreateBill = () => {
         };
       }),
       subtotal,
-      discountPercentage,
       discountAmount,
       taxAmount: tax, // Map to backend TaxAmount
       tax, // Keep for frontend compatibility if needed, or remove if strictly following backend model
       total,
       status: 'paid' as const,
-      createdBy: "Admin" // Placeholder for now, will implement auth later
+      createdBy: user?.name || "Unknown User"
     };
 
     // Update stock for each product
@@ -180,7 +168,7 @@ const CreateBill = () => {
       }
     });
 
-    billManager.add(newBill);
+    await billManager.add(newBill);
     toast.success(`Bill ${newBill.billNumber} created successfully! Stock updated.`);
 
     // Navigate to bills page after short delay
@@ -228,9 +216,9 @@ const CreateBill = () => {
 
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <CardTitle>Bill Items</CardTitle>
-                  <Button type="button" onClick={addItem} size="sm">
+                  <Button type="button" onClick={addItem} size="sm" className="w-full sm:w-auto">
                     <Plus className="h-4 w-4 mr-2" />
                     Add New Row
                   </Button>
@@ -304,24 +292,23 @@ const CreateBill = () => {
                   </div>
 
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Discount (%)</span>
+                    <span className="text-muted-foreground">Discount (₹)</span>
                     <Input
                       type="number"
-                      className="w-20 h-8 text-right"
+                      className="w-24 h-8 text-right"
                       min="0"
-                      max="100"
-                      value={discountPercentage}
-                      onChange={(e) => setDiscountPercentage(parseFloat(e.target.value) || 0)}
+                      value={discountAmount}
+                      onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
                     />
                   </div>
                   <div className="flex justify-between text-sm text-green-600">
                     <span className="text-muted-foreground">Discount Amount</span>
-                    <span className="font-medium">-₹{calculateDiscountAmount().toFixed(2)}</span>
+                    <span className="font-medium">-₹{discountAmount.toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Tax (0%)</span>
-                    <span className="font-medium">₹{calculateTax().toFixed(2)}</span>
+                    <span className="font-medium">₹{((calculateSubtotal() - discountAmount) * 0.0).toFixed(2)}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between">
                     <span className="font-semibold">Total</span>
