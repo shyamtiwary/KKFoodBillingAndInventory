@@ -38,7 +38,7 @@ const navItems = [
   },
 ];
 
-export const Sidebar = () => {
+export const SidebarContent = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -51,7 +51,7 @@ export const Sidebar = () => {
   );
 
   return (
-    <aside className="w-64 min-h-screen bg-card border-r border-border flex flex-col">
+    <div className="flex flex-col h-full">
       <div className="p-6">
         <h1 className="text-2xl font-bold text-primary">K K Foods</h1>
         <p className="text-sm text-muted-foreground mt-1">Inventory & Billing</p>
@@ -87,6 +87,14 @@ export const Sidebar = () => {
           Logout
         </Button>
       </div>
+    </div>
+  );
+};
+
+export const Sidebar = ({ className }: { className?: string }) => {
+  return (
+    <aside className={cn("w-64 min-h-screen bg-card border-r border-border flex flex-col", className)}>
+      <SidebarContent />
     </aside>
   );
 };

@@ -86,46 +86,50 @@ const Reports = () => {
                     <CardTitle>Filter & Export</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex flex-wrap gap-4 items-end">
-                        <div className="space-y-2">
+                    <div className="flex flex-col md:flex-row gap-4 items-end">
+                        <div className="w-full md:w-auto space-y-2">
                             <label className="text-sm font-medium">Start Date</label>
                             <Input
                                 type="date"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
+                                className="w-full"
                             />
                         </div>
-                        <div className="space-y-2">
+                        <div className="w-full md:w-auto space-y-2">
                             <label className="text-sm font-medium">End Date</label>
                             <Input
                                 type="date"
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
+                                className="w-full"
                             />
                         </div>
-                        <Button onClick={fetchReport} disabled={loading}>
-                            {loading ? "Loading..." : "Generate Report"}
-                        </Button>
-                        <Button variant="outline" onClick={handleExport} disabled={salesData.length === 0}>
-                            Export CSV
-                        </Button>
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <Button onClick={fetchReport} disabled={loading} className="flex-1 md:flex-none">
+                                {loading ? "Loading..." : "Generate Report"}
+                            </Button>
+                            <Button variant="outline" onClick={handleExport} disabled={salesData.length === 0} className="flex-1 md:flex-none">
+                                Export CSV
+                            </Button>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Product Sales</CardTitle>
+                    <CardTitle>Report Data</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="rounded-md border">
-                        <Table>
+                    <div className="overflow-x-auto">
+                        <Table className="min-w-[600px]">
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Product Name</TableHead>
                                     <TableHead className="text-right">Quantity Sold</TableHead>
                                     <TableHead className="text-right">Revenue</TableHead>
-                                    <TableHead className="text-right">Invoices</TableHead>
+                                    <TableHead className="text-right">Invoice Count</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
