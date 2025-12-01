@@ -1,25 +1,13 @@
-import { Product, products as initialProducts } from '@/data/testData';
+import { Product } from '@/data/testData';
 
 import { SERVICE_URLS } from '@/config/apiConfig';
 
 const API_URL = SERVICE_URLS.INVENTORY;
 
 export const productManager = {
-  // Initialize with test data if the microservice is empty
-  initialize: async () => {
-    const response = await fetch(API_URL);
-    const products = await response.json();
-    if (products.length === 0) {
-      for (const product of initialProducts) {
-        await fetch(API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(product),
-        });
-      }
-    }
+  // Initialize - no longer needed
+  initialize: () => {
+    // No-op
   },
 
   // Get all products
@@ -28,16 +16,16 @@ export const productManager = {
       const response = await fetch(API_URL);
 
       if (!response.ok) {
-        console.warn('Failed to fetch products, returning initial products.');
-        return initialProducts; // Return fallback data if the response is not OK
+        console.warn('Failed to fetch products from API');
+        return [];
       }
 
-      const data = await response.json(); // Parse the JSON response once
-      console.log('Fetching products from microservice:', data);
+      const data = await response.json();
+      console.log('Fetched products from API:', data);
       return data;
     } catch (error) {
       console.error('Error fetching products:', error);
-      return initialProducts; // Return fallback data in case of an error
+      return [];
     }
   },
 
@@ -72,7 +60,7 @@ export const productManager = {
     });
   },
 
-  // Generate next product ID (this may need to be handled by the microservice)
+  // Generate next product ID
   generateId: async (): Promise<string> => {
     const products = await productManager.getAll();
     const maxId = products.reduce((max, product) => {

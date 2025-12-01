@@ -23,9 +23,10 @@ const CreateBill = () => {
   const { user } = useAuth();
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [items, setItems] = useState<BillItem[]>([{ productId: "", quantity: 0, price: 0 }]); // Start with 0 quantity
+  const [items, setItems] = useState<BillItem[]>([{ productId: "", quantity: 0, price: 0 }]);
   const [products, setProducts] = useState<Product[]>([]);
   const [discountAmount, setDiscountAmount] = useState<number>(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -94,85 +95,97 @@ const CreateBill = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!customerName || !customerEmail) {
-      setCustomerName("Walk-in Customer");
-      setCustomerEmail("N/A");
-    }
+    if (isSubmitting) return; // Prevent double submission
+    setIsSubmitting(true);
 
-    // Filter out empty rows (no product or 0 quantity)
-    const validItems = items.filter(item => item.productId && (typeof item.quantity === 'number' ? item.quantity > 0 : parseFloat(item.quantity) > 0));
+    try {
+      if (!customerName || !customerEmail) {
+        setCustomerName("Walk-in Customer");
+        setCustomerEmail("N/A");
+      }
 
-    if (validItems.length === 0) {
-      toast.error("Please add at least one valid item");
-      return;
-    }
+      // Filter out empty rows (no product or 0 quantity)
+      const validItems = items.filter(item => item.productId && (typeof item.quantity === 'number' ? item.quantity > 0 : parseFloat(item.quantity) > 0));
 
-    // Check stock availability with aggregated quantities
-    const productQuantities = new Map<string, number>();
-    for (const item of validItems) {
-      const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-      const currentQty = productQuantities.get(item.productId) || 0;
-      productQuantities.set(item.productId, currentQty + qty);
-    }
-
-    for (const [productId, totalQuantity] of productQuantities.entries()) {
-      const product = products.find(p => p.id === productId);
-      if (!product) {
-        toast.error("Product not found");
+      if (validItems.length === 0) {
+        toast.error("Please add at least one valid item");
+        setIsSubmitting(false);
         return;
       }
-      if (product.stock < totalQuantity) {
-        toast.error(`Insufficient stock for ${product.name}. Requested: ${totalQuantity}, Available: ${product.stock}`);
-        return;
+
+      // Check stock availability with aggregated quantities
+      const productQuantities = new Map<string, number>();
+      for (const item of validItems) {
+        const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+        const currentQty = productQuantities.get(item.productId) || 0;
+        productQuantities.set(item.productId, currentQty + qty);
       }
-    }
 
-    const subtotal = calculateSubtotal();
-    const tax = (subtotal - discountAmount) * 0.0;
-    const total = calculateTotal();
+      for (const [productId, totalQuantity] of productQuantities.entries()) {
+        const product = products.find(p => p.id === productId);
+        if (!product) {
+          toast.error("Product not found");
+          setIsSubmitting(false);
+          return;
+        }
+        if (product.stock < totalQuantity) {
+          toast.error(`Insufficient stock for ${product.name}. Requested: ${totalQuantity}, Available: ${product.stock}`);
+          setIsSubmitting(false);
+          return;
+        }
+      }
 
-    const newBill = {
-      id: Date.now().toString(),
-      billNumber: await billManager.generateBillNumber(),
-      customerName: customerName == "" ? "Walk-in Customer" : customerName,
-      customerEmail: customerEmail == "" ? "N/A" : customerEmail,
-      date: new Date().toISOString().split('T')[0],
-      items: validItems.map(item => {
+      const subtotal = calculateSubtotal();
+      const tax = (subtotal - discountAmount) * 0.0;
+      const total = calculateTotal();
+
+      const newBill = {
+        id: Date.now().toString(),
+        billNumber: await billManager.generateBillNumber(),
+        customerName: customerName == "" ? "Walk-in Customer" : customerName,
+        customerEmail: customerEmail == "" ? "N/A" : customerEmail,
+        date: new Date().toISOString().split('T')[0],
+        items: validItems.map(item => {
+          const product = products.find(p => p.id === item.productId);
+          const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+          return {
+            productId: item.productId,
+            productName: product?.name || "",
+            quantity: qty,
+            price: item.price,
+            total: item.price * qty,
+          };
+        }),
+        subtotal,
+        discountAmount,
+        taxAmount: tax,
+        tax,
+        total,
+        status: 'paid' as const,
+        createdBy: user?.name || "Unknown User"
+      };
+
+      // Update stock for each product
+      validItems.forEach(item => {
         const product = products.find(p => p.id === item.productId);
-        const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-        return {
-          productId: item.productId,
-          productName: product?.name || "",
-          quantity: qty,
-          price: item.price,
-          total: item.price * qty,
-        };
-      }),
-      subtotal,
-      discountAmount,
-      taxAmount: tax, // Map to backend TaxAmount
-      tax, // Keep for frontend compatibility if needed, or remove if strictly following backend model
-      total,
-      status: 'paid' as const,
-      createdBy: user?.name || "Unknown User"
-    };
+        if (product) {
+          const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
+          productManager.update(item.productId, {
+            stock: product.stock - qty
+          });
+        }
+      });
 
-    // Update stock for each product
-    validItems.forEach(item => {
-      const product = products.find(p => p.id === item.productId);
-      if (product) {
-        const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
-        productManager.update(item.productId, {
-          stock: product.stock - qty
-        });
-      }
-    });
+      await billManager.add(newBill);
+      toast.success(`Bill ${newBill.billNumber} created successfully! Stock updated.`);
 
-    await billManager.add(newBill);
-    toast.success(`Bill ${newBill.billNumber} created successfully! Stock updated.`);
-
-    // Navigate to bills page after short delay
-    setTimeout(() => navigate('/bills'), 1000);
+      // Navigate to bills page after short delay
+      setTimeout(() => navigate('/bills'), 1000);
+    } catch (error) {
+      console.error("Error creating bill:", error);
+      toast.error("Failed to create bill");
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -317,9 +330,9 @@ const CreateBill = () => {
                     </span>
                   </div>
                 </div>
-                <Button type="submit" className="w-full" size="lg">
+                <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
                   <Save className="h-4 w-4 mr-2" />
-                  Create Bill
+                  {isSubmitting ? "Creating Bill..." : "Create Bill"}
                 </Button>
               </CardContent>
             </Card>
