@@ -146,4 +146,43 @@ public class MsAccessBillRepository : IBillRepository
         parameter.Value = value ?? DBNull.Value;
         command.Parameters.Add(parameter);
     }
+
+    public async Task<bool> DeleteAsync(string id)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            // Delete bill items first
+            const string deleteItemsSql = "DELETE FROM BillItems WHERE BillId = ?";
+            using (var cmd = connection.CreateCommand())
+            {
+                cmd.Transaction = transaction;
+                cmd.CommandText = deleteItemsSql;
+                AddParameter(cmd, "@BillId", id);
+                await Task.Run(() => cmd.ExecuteNonQuery());
+            }
+
+            // Delete the bill
+            const string deleteBillSql = "DELETE FROM Bills WHERE Id = ?";
+            int rows;
+            using (var cmd = connection.CreateCommand())
+            {
+                cmd.Transaction = transaction;
+                cmd.CommandText = deleteBillSql;
+                AddParameter(cmd, "@Id", id);
+                rows = await Task.Run(() => cmd.ExecuteNonQuery());
+            }
+
+            transaction.Commit();
+            return rows > 0;
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
 }

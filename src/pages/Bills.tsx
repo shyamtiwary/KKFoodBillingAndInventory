@@ -1,4 +1,12 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,6 +27,7 @@ const Bills = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
 
   useEffect(() => {
     billManager.initialize();
@@ -149,22 +158,21 @@ const Bills = () => {
     toast.success("PDF downloaded successfully");
   };
 
-  const handleDeleteBill = async (bill: Bill) => {
+  const handleDeleteClick = (bill: Bill) => {
     if (!user || user.role !== 'admin') {
       toast.error("Only admins can delete bills");
       return;
     }
+    setBillToDelete(bill);
+  };
 
-    const confirmed = window.confirm(
-      `Are you sure you want to delete bill ${bill.billNumber}? This will restore the stock for all items in this bill.`
-    );
-
-    if (!confirmed) return;
+  const confirmDeleteBill = async () => {
+    if (!billToDelete) return;
 
     try {
       // Restore stock for each item in the bill
       const products = await productManager.getAll();
-      for (const item of bill.items) {
+      for (const item of billToDelete.items) {
         const product = products.find(p => p.id === item.productId);
         if (product) {
           await productManager.update(item.productId, {
@@ -174,9 +182,9 @@ const Bills = () => {
       }
 
       // Delete the bill
-      const success = await billManager.delete(bill.id);
+      const success = await billManager.delete(billToDelete.id);
       if (success) {
-        toast.success(`Bill ${bill.billNumber} deleted and stock restored successfully`);
+        toast.success(`Bill ${billToDelete.billNumber} deleted and stock restored successfully`);
         loadBills();
       } else {
         toast.error("Failed to delete bill");
@@ -184,6 +192,8 @@ const Bills = () => {
     } catch (error) {
       console.error("Error deleting bill:", error);
       toast.error("Failed to delete bill and restore stock");
+    } finally {
+      setBillToDelete(null);
     }
   };
 
@@ -307,7 +317,7 @@ const Bills = () => {
                           <Download className="h-4 w-4" />
                         </Button>
                         {user?.role === 'admin' && (
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteBill(bill)} title="Delete Bill" className="text-destructive hover:text-destructive">
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(bill)} title="Delete Bill" className="text-destructive hover:text-destructive">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
@@ -325,6 +335,25 @@ const Bills = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!billToDelete} onOpenChange={(open) => !open && setBillToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete bill {billToDelete?.billNumber}? This action cannot be undone and will restore the stock for all items in this bill.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBillToDelete(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteBill}>
+              Delete Bill
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

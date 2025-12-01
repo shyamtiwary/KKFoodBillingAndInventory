@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState } from "react";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { FileText } from "lucide-react";
 
 interface ProductSales {
     productId: string;
@@ -47,7 +50,48 @@ const Reports = () => {
         }
     };
 
-    const handleExport = () => {
+    const handleExportPDF = () => {
+        if (salesData.length === 0) {
+            toast.error("No data to export");
+            return;
+        }
+
+        const doc = new jsPDF();
+
+        // Title
+        doc.setFontSize(18);
+        doc.text("Sales Report", 14, 22);
+        doc.setFontSize(11);
+        doc.text(`Period: ${startDate || 'All time'} to ${endDate || 'All time'}`, 14, 30);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 36);
+
+        // Table
+        const tableColumn = ["Product Name", "Quantity Sold", "Revenue", "Invoice Count"];
+        const tableRows = salesData.map(item => [
+            item.productName,
+            item.totalQuantity.toString(),
+            item.totalRevenue.toFixed(2),
+            item.invoiceCount.toString()
+        ]);
+
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 44,
+            styles: { fontSize: 10 },
+            headStyles: { fillColor: [66, 66, 66] },
+            columnStyles: {
+                1: { halign: 'right' },
+                2: { halign: 'right' },
+                3: { halign: 'right' }
+            }
+        });
+
+        doc.save(`sales_report_${new Date().toISOString().split('T')[0]}.pdf`);
+        toast.success("Report exported to PDF");
+    };
+
+    const handleExportCSV = () => {
         if (salesData.length === 0) {
             toast.error("No data to export");
             return;
@@ -109,7 +153,11 @@ const Reports = () => {
                             <Button onClick={fetchReport} disabled={loading} className="flex-1 md:flex-none">
                                 {loading ? "Loading..." : "Generate Report"}
                             </Button>
-                            <Button variant="outline" onClick={handleExport} disabled={salesData.length === 0} className="flex-1 md:flex-none">
+                            <Button variant="outline" onClick={handleExportPDF} disabled={salesData.length === 0} className="flex-1 md:flex-none">
+                                <FileText className="h-4 w-4 mr-2" />
+                                Export PDF
+                            </Button>
+                            <Button variant="outline" onClick={handleExportCSV} disabled={salesData.length === 0} className="flex-1 md:flex-none">
                                 Export CSV
                             </Button>
                         </div>

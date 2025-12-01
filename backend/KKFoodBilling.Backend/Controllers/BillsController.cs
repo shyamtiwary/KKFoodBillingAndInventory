@@ -38,6 +38,17 @@ public class BillsController : ControllerBase
         return Ok(bills);
     }
 
+    [HttpGet("{id}")]
+    public async Task<ActionResult<Bill>> Get(string id)
+    {
+        var bill = await _repository.GetByIdAsync(id);
+        if (bill == null)
+        {
+            return NotFound();
+        }
+        return Ok(bill);
+    }
+
     [HttpPost]
     public async Task<ActionResult<Bill>> Post(Bill bill)
     {
@@ -48,6 +59,24 @@ public class BillsController : ControllerBase
         
         await _repository.AddAsync(bill);
         
-        return CreatedAtAction(nameof(Get), new { id = bill.Id }, bill);
+        return CreatedAtAction(nameof(Get), new {id = bill.Id }, bill);
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        var bill = await _repository.GetByIdAsync(id);
+        if (bill == null)
+        {
+            return NotFound();
+        }
+
+        var success = await _repository.DeleteAsync(id);
+        if (!success)
+        {
+            return StatusCode(500, "Failed to delete bill");
+        }
+
+        return NoContent();
     }
 }

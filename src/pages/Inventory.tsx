@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Package, Pencil, Trash2, FileSpreadsheet } from "lucide-react";
+import { Search, Package, Pencil, Trash2, FileSpreadsheet, FileText } from "lucide-react";
 import { Product } from "@/data/testData";
 import { useState, useEffect } from "react";
 import { productManager } from "@/lib/productManager";
@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -174,6 +176,42 @@ const Inventory = () => {
     toast.success("Inventory exported to CSV file");
   };
 
+  const handleExportInventoryPDF = () => {
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFontSize(18);
+    doc.text("Inventory Report", 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 30);
+
+    // Table
+    const tableColumn = ["SKU", "Name", "Category", "Cost Price", "Sell Price", "Stock", "Status"];
+    const tableRows = products.map(product => {
+      const status = getStockStatus(product).label;
+      return [
+        product.sku,
+        product.name,
+        product.category,
+        product.costPrice.toString(),
+        product.sellPrice.toString(),
+        product.stock.toString(),
+        status
+      ];
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 40,
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [66, 66, 66] }
+    });
+
+    doc.save(`inventory-${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success("Inventory exported to PDF file");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -184,6 +222,10 @@ const Inventory = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportInventoryPDF}>
+            <FileText className="h-4 w-4 mr-2" />
+            Export PDF
+          </Button>
           <Button variant="outline" onClick={handleExportInventoryCSV}>
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Export CSV

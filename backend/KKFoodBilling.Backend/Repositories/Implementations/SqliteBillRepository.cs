@@ -102,4 +102,30 @@ public class SqliteBillRepository : IBillRepository
             throw;
         }
     }
+
+    public async Task<bool> DeleteAsync(string id)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            // Delete bill items first (foreign key constraint)
+            const string deleteItemsSql = "DELETE FROM BillItems WHERE BillId = @BillId";
+            await connection.ExecuteAsync(deleteItemsSql, new { BillId = id }, transaction);
+
+            // Delete the bill
+            const string deleteBillSql = "DELETE FROM Bills WHERE Id = @Id";
+            var rows = await connection.ExecuteAsync(deleteBillSql, new { Id = id }, transaction);
+
+            transaction.Commit();
+            return rows > 0;
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
 }
