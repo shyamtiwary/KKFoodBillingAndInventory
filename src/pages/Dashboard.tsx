@@ -39,19 +39,24 @@ const Dashboard = () => {
   let profit = 0;
 
   bills.forEach(bill => {
-    let i = 0;
-    const product = products.find(p => p.name === bill.items[i]?.productName);
-    if (!product) return;
+    if (bill.status !== "paid") return;
 
-    const sp = product.sellPrice;
-    const cp = product.costPrice;
+    bill.items.forEach(item => {
+      const product = products.find(p => p.name === item.productName);
+      if (!product) return;
 
-    if (bill.status === "paid") {
-      const totalQty = bill.items.reduce((sum, x) => sum + x.quantity, 0);
-      profit += (sp - cp) * totalQty;
-      costprice += cp * totalQty;
+      const sp = product.sellPrice;
+      const cp = product.costPrice;
+      const itemProfit = (sp - cp) * item.quantity;
+
+      profit += itemProfit;
+      costprice += cp * item.quantity;
+    });
+
+    // Subtract discount from profit
+    if (bill.discountAmount) {
+      profit -= bill.discountAmount;
     }
-    i++;
   });
 
   const totalRevenue = bills

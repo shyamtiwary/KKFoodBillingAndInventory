@@ -78,4 +78,22 @@ export const billManager = {
     link.click();
     URL.revokeObjectURL(url);
   },
+
+  // Delete a bill
+  delete: async (billId: string): Promise<boolean> => {
+    // Remove from local storage first for immediate UI update
+    const bills = await billManager.getAll();
+    const updatedBills = bills.filter(b => b.id !== billId);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedBills));
+
+    try {
+      const response = await fetch(`${SERVICE_URLS.BILLING}/${billId}`, {
+        method: 'DELETE',
+      });
+      return response.ok;
+    } catch (error) {
+      console.warn('API offline, bill deleted locally only.');
+      return true; // Return true since local deletion succeeded
+    }
+  },
 };

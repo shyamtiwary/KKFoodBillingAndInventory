@@ -25,104 +25,14 @@ export interface Bill {
   date: string;
   items: BillItem[];
   subtotal: number;
+  discountAmount: number;
   tax: number;
   total: number;
   status: 'paid' | 'pending' | 'overdue';
+  createdBy?: string;
 }
 
-export const products: Product[] = [
-  {
-    id: '1',
-    name: 'Kaju',
-    category: 'FMCG',
-    costPrice: 1000,
-    sellPrice: 1200,
-    stock: 20,
-    sku: 'WM-001',
-    lowStockThreshold: 10,
-  },
-  // {
-  //   id: '2',
-  //   name: 'Mechanical Keyboard',
-  //   category: 'Electronics',
-  //   price: 89.99,
-  //   stock: 8,
-  //   sku: 'KB-002',
-  //   lowStockThreshold: 10,
-  // },
-  // {
-  //   id: '3',
-  //   name: 'USB-C Cable',
-  //   category: 'Accessories',
-  //   price: 12.99,
-  //   stock: 5,
-  //   sku: 'CB-003',
-  //   lowStockThreshold: 15,
-  // },
-  // {
-  //   id: '4',
-  //   name: 'Laptop Stand',
-  //   category: 'Accessories',
-  //   price: 45.99,
-  //   stock: 67,
-  //   sku: 'LS-004',
-  //   lowStockThreshold: 10,
-  // },
-  // {
-  //   id: '5',
-  //   name: 'Webcam HD',
-  //   category: 'Electronics',
-  //   price: 69.99,
-  //   stock: 34,
-  //   sku: 'WC-005',
-  //   lowStockThreshold: 15,
-  // },
-  // {
-  //   id: '6',
-  //   name: 'Desk Lamp',
-  //   category: 'Office',
-  //   price: 34.99,
-  //   stock: 89,
-  //   sku: 'DL-006',
-  //   lowStockThreshold: 20,
-  // },
-  // {
-  //   id: '7',
-  //   name: 'Monitor 27"',
-  //   category: 'Electronics',
-  //   price: 299.99,
-  //   stock: 23,
-  //   sku: 'MN-007',
-  //   lowStockThreshold: 5,
-  // },
-  // {
-  //   id: '8',
-  //   name: 'Office Chair',
-  //   category: 'Furniture',
-  //   price: 199.99,
-  //   stock: 12,
-  //   sku: 'OC-008',
-  //   lowStockThreshold: 5,
-  // },
-  // {
-  //   id: '9',
-  //   name: 'Notebook Set',
-  //   category: 'Stationery',
-  //   price: 15.99,
-  //   stock: 2,
-  //   sku: 'NB-009',
-  //   lowStockThreshold: 25,
-  // },
-  // {
-  //   id: '10',
-  //   name: 'Pen Set Premium',
-  //   category: 'Stationery',
-  //   price: 24.99,
-  //   stock: 156,
-  //   sku: 'PS-010',
-  //   lowStockThreshold: 30,
-  // },
-];
+export const products: Product[] = [];
 
 export const bills: Bill[] = [
   //{
