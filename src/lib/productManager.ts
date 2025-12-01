@@ -1,4 +1,4 @@
-import { Product, products as initialProducts } from '@/data/testData';
+import { Product } from '@/data/testData';
 
 import { SERVICE_URLS } from '@/config/apiConfig';
 
@@ -60,7 +60,7 @@ export const productManager = {
     });
   },
 
-  // Generate next product ID (this may need to be handled by the microservice)
+  // Generate next product ID
   generateId: async (): Promise<string> => {
     const products = await productManager.getAll();
     const maxId = products.reduce((max, product) => {

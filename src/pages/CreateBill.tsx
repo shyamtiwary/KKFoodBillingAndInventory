@@ -23,7 +23,7 @@ const CreateBill = () => {
   const { user } = useAuth();
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [items, setItems] = useState<BillItem[]>([{ productId: "", quantity: 0, price: 0 }]); // Start with 0 quantity
+  const [items, setItems] = useState<BillItem[]>([{ productId: "", quantity: 0, price: 0 }]);
   const [products, setProducts] = useState<Product[]>([]);
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
