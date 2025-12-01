@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "Id": "1",
+    "Name": "Kaju",
+    "Sku": "WM-001",
+    "Category": "FMCG",
+    "CostPrice": 1000,
+    "SellPrice": 1200,
+    "Stock": 18.5,
+    "LowStockThreshold": 10
+  }
+]

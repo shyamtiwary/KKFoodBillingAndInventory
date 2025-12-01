@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("KKFoodBilling.Backend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3739fe752ddc38dd489b52b4d2782626bb945095")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2728d755a4d5b6db295fb284a0285d84ae4e74a9")]
 [assembly: System.Reflection.AssemblyProductAttribute("KKFoodBilling.Backend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("KKFoodBilling.Backend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
