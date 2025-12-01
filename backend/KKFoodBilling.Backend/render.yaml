@@ -1,0 +1,12 @@
+# Render.com build configuration
+# Place this file in the root of your backend directory
+
+# Build settings
+build:
+  - dotnet restore
+  - dotnet build -c Release
+
+# Runtime
+runtime: dotnet8
+
+# Start command will be specified in Render dashboard

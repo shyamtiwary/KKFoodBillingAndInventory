@@ -1,5 +1,5 @@
 using KKFoodBilling.Backend.Models;
-using KKFoodBilling.Backend.Helpers;
+using KKFoodBilling.Backend.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KKFoodBilling.Backend.Controllers;
@@ -8,12 +8,17 @@ namespace KKFoodBilling.Backend.Controllers;
 [Route("api/[controller]")]
 public class BillsController : ControllerBase
 {
-    private const string FileName = "bills.json";
+    private readonly IBillRepository _repository;
+
+    public BillsController(IBillRepository repository)
+    {
+        _repository = repository;
+    }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Bill>> Get([FromQuery] string? startDate, [FromQuery] string? endDate)
+    public async Task<ActionResult<IEnumerable<Bill>>> Get([FromQuery] string? startDate, [FromQuery] string? endDate)
     {
-        var bills = JsonFileHelper.GetData<Bill>(FileName);
+        var bills = await _repository.GetAllAsync();
         
         if (!string.IsNullOrEmpty(startDate) && !string.IsNullOrEmpty(endDate))
         {
@@ -34,17 +39,14 @@ public class BillsController : ControllerBase
     }
 
     [HttpPost]
-    public ActionResult<Bill> Post(Bill bill)
+    public async Task<ActionResult<Bill>> Post(Bill bill)
     {
-        var bills = JsonFileHelper.GetData<Bill>(FileName);
-        
         if (string.IsNullOrEmpty(bill.Id))
         {
             bill.Id = Guid.NewGuid().ToString();
         }
         
-        bills.Insert(0, bill); // Add to beginning
-        JsonFileHelper.SaveData(FileName, bills);
+        await _repository.AddAsync(bill);
         
         return CreatedAtAction(nameof(Get), new { id = bill.Id }, bill);
     }

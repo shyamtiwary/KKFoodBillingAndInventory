@@ -1,5 +1,5 @@
 using KKFoodBilling.Backend.Models;
-using KKFoodBilling.Backend.Helpers;
+using KKFoodBilling.Backend.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KKFoodBilling.Backend.Controllers;
@@ -8,36 +8,37 @@ namespace KKFoodBilling.Backend.Controllers;
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
 {
-    private const string FileName = "products.json";
+    private readonly IProductRepository _repository;
+
+    public ProductsController(IProductRepository repository)
+    {
+        _repository = repository;
+    }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Product>> Get()
+    public async Task<ActionResult<IEnumerable<Product>>> Get()
     {
-        var products = JsonFileHelper.GetData<Product>(FileName);
+        var products = await _repository.GetAllAsync();
         return Ok(products);
     }
 
     [HttpPost]
-    public ActionResult<Product> Post(Product product)
+    public async Task<ActionResult<Product>> Post(Product product)
     {
-        var products = JsonFileHelper.GetData<Product>(FileName);
-        
         if (string.IsNullOrEmpty(product.Id))
         {
             product.Id = Guid.NewGuid().ToString();
         }
         
-        products.Add(product);
-        JsonFileHelper.SaveData(FileName, products);
+        await _repository.AddAsync(product);
         
         return CreatedAtAction(nameof(Get), new { id = product.Id }, product);
     }
 
     [HttpPut("{id}")]
-    public IActionResult Put(string id, Product updatedProduct)
+    public async Task<IActionResult> Put(string id, Product updatedProduct)
     {
-        var products = JsonFileHelper.GetData<Product>(FileName);
-        var product = products.FirstOrDefault(p => p.Id == id);
+        var product = await _repository.GetByIdAsync(id);
         
         if (product == null)
         {
@@ -45,7 +46,6 @@ public class ProductsController : ControllerBase
         }
 
         // Only update fields that are explicitly provided (non-null/non-empty)
-        // This allows partial updates without corrupting existing data
         if (!string.IsNullOrEmpty(updatedProduct.Name))
         {
             product.Name = updatedProduct.Name;
@@ -66,8 +66,23 @@ public class ProductsController : ControllerBase
         {
             product.SellPrice = updatedProduct.SellPrice;
         }
-        // Stock can be 0, so always update it
-        // Note: Stock is now decimal to allow fractional quantities
+        
+        // Always update stock if provided (assuming the frontend sends the current stock if it hasn't changed, or we trust the partial update logic)
+        // The previous logic was: product.Stock = updatedProduct.Stock;
+        // But if updatedProduct is partial, Stock might be 0 (default).
+        // However, the previous code ALWAYS updated stock: "product.Stock = updatedProduct.Stock;"
+        // This implies the frontend sends the full object or at least the stock.
+        // But wait, if I send { Name: "New Name" }, Stock will be 0.
+        // The previous code would overwrite Stock with 0.
+        // If that was the behavior, I should preserve it?
+        // "Stock can be 0, so always update it" comment suggests it was intentional or accepted.
+        // But for a partial update, overwriting with 0 is dangerous.
+        // However, looking at the previous code:
+        // "product.Stock = updatedProduct.Stock;"
+        // Yes, it overwrote it.
+        // I will stick to the previous logic to avoid breaking changes, but ideally we should check if it was provided.
+        // Since `decimal` is value type, we can't know if it was null.
+        // I'll keep it as is.
         product.Stock = updatedProduct.Stock;
         
         if (updatedProduct.LowStockThreshold > 0)
@@ -75,25 +90,21 @@ public class ProductsController : ControllerBase
             product.LowStockThreshold = updatedProduct.LowStockThreshold;
         }
 
-        JsonFileHelper.SaveData(FileName, products);
+        await _repository.UpdateAsync(product);
 
         return Ok(product);
     }
 
     [HttpDelete("{id}")]
-    public IActionResult Delete(string id)
+    public async Task<IActionResult> Delete(string id)
     {
-        var products = JsonFileHelper.GetData<Product>(FileName);
-        var product = products.FirstOrDefault(p => p.Id == id);
+        var success = await _repository.DeleteAsync(id);
         
-        if (product == null)
+        if (!success)
         {
             return NotFound();
         }
 
-        products.Remove(product);
-        JsonFileHelper.SaveData(FileName, products);
-        
         return NoContent();
     }
 }

@@ -1,5 +1,5 @@
 using KKFoodBilling.Backend.Models;
-using KKFoodBilling.Backend.Helpers;
+using KKFoodBilling.Backend.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KKFoodBilling.Backend.Controllers;
@@ -8,12 +8,17 @@ namespace KKFoodBilling.Backend.Controllers;
 [Route("api/[controller]")]
 public class ReportsController : ControllerBase
 {
-    private const string BillsFileName = "bills.json";
+    private readonly IBillRepository _repository;
+
+    public ReportsController(IBillRepository repository)
+    {
+        _repository = repository;
+    }
 
     [HttpGet("sales")]
-    public ActionResult<IEnumerable<object>> GetProductSales([FromQuery] string? startDate, [FromQuery] string? endDate)
+    public async Task<ActionResult<IEnumerable<object>>> GetProductSales([FromQuery] string? startDate, [FromQuery] string? endDate)
     {
-        var bills = JsonFileHelper.GetData<Bill>(BillsFileName);
+        var bills = await _repository.GetAllAsync();
 
         // Filter by date if provided
         if (!string.IsNullOrEmpty(startDate) && !string.IsNullOrEmpty(endDate))

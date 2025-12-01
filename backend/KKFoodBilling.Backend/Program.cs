@@ -1,3 +1,8 @@
+using KKFoodBilling.Backend.Data;
+using KKFoodBilling.Backend.Data.Infrastructure;
+using KKFoodBilling.Backend.Repositories.Implementations;
+using KKFoodBilling.Backend.Repositories.Interfaces;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -17,6 +22,12 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+
+// Register Database Services
+builder.Services.AddSingleton<IDbConnectionFactory, SqliteConnectionFactory>();
+builder.Services.AddScoped<IProductRepository, SqliteProductRepository>();
+builder.Services.AddScoped<IBillRepository, SqliteBillRepository>();
+builder.Services.AddScoped<DatabaseInitializer>();
 
 
 // Configure CORS
@@ -54,6 +65,21 @@ if (builder.Environment.IsDevelopment())
 }
 
 var app = builder.Build();
+
+// Initialize Database
+using (var scope = app.Services.CreateScope())
+{
+    var initializer = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
+    try 
+    {
+        initializer.Initialize();
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while initializing the database.");
+    }
+}
 
 // Configure the HTTP request pipeline.
 // Enable Swagger in both development and production for API documentation
