@@ -1,12 +1,8 @@
 services:
-  # PostgreSQL Database
-  - type: pserv
-    name: kk-food-postgres
-    plan: free
-
   # Backend API
   - type: web
     name: kk-food-backend
+    runtime: dotnet
     plan: free
     buildCommand: cd backend/KKFoodBilling.Backend && dotnet publish -c Release -o ./publish
     startCommand: cd backend/KKFoodBilling.Backend/publish && dotnet KKFoodBilling.Backend.dll --urls=http://0.0.0.0:$PORT
@@ -15,7 +11,10 @@ services:
         value: Production
       - key: DatabaseProvider
         value: PostgreSQL
-      - key: ConnectionStrings__PostgreSqlConnection
-        fromDatabase:
-          name: kk-food-postgres
-          property: connectionString
+      # Note: After creating a PostgreSQL database in Render, 
+      # add this environment variable manually with the connection string
+      # - key: ConnectionStrings__PostgreSqlConnection
+      #   value: <your-postgres-internal-url>
+
+# Note: Create the PostgreSQL database separately in Render Dashboard
+# Then add the connection string as an environment variable above
