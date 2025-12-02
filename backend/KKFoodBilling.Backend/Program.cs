@@ -59,10 +59,13 @@ builder.Services.AddCors(options =>
                     if (origin == "https://kk-food-billing-and-inventory.vercel.app") return true;
                     // Allow any vercel.app subdomain (for previews)
                     if (uri.Host.EndsWith(".vercel.app")) return true;
+                    // Allow Render backend (for health checks and Swagger)
+                    if (uri.Host.EndsWith(".onrender.com")) return true;
                     return false;
                 })
                 .AllowAnyHeader()
-                .AllowAnyMethod();
+                .AllowAnyMethod()
+                .AllowCredentials();
         });
 });
 
