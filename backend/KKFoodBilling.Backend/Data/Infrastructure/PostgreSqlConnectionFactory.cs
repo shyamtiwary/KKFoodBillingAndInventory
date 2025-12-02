@@ -9,8 +9,12 @@ public class PostgreSqlConnectionFactory : IDbConnectionFactory
 
     public PostgreSqlConnectionFactory(IConfiguration configuration)
     {
-        _connectionString = configuration.GetConnectionString("PostgreSqlConnection") 
-                            ?? throw new ArgumentNullException("Connection string 'PostgreSqlConnection' not found.");
+        // Try DATABASE_URL first (Render's default)
+        _connectionString = configuration["DATABASE_URL"] 
+                            ?? configuration.GetConnectionString("PostgreSqlConnection")
+                            ?? throw new InvalidOperationException(
+                                "PostgreSQL connection string not found. " +
+                                "Set either DATABASE_URL or ConnectionStrings:PostgreSqlConnection in environment variables.");
     }
 
     public IDbConnection CreateConnection()
