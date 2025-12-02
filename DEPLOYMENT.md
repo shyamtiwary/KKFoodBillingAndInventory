@@ -1,162 +1,213 @@
-# KK Food Billing - Deployment Guide
+# Deploying to Render.com with PostgreSQL
 
-## Free Hosting Deployment (Recommended)
+This guide covers deploying the KK Food Billing & Inventory application to Render with PostgreSQL for persistent data storage.
 
-This application is configured for FREE hosting using:
-- **Frontend**: Vercel (https://vercel.com)
-- **Backend**: Render.com (https://render.com)
+## Prerequisites
 
-### Quick Deployment Steps
+- GitHub account
+- Render.com account (free tier sufficient)
+- Application code pushed to GitHub
 
-#### Prerequisites
-1. Create a GitHub account and repository for this project
-2. Push your code to GitHub: `git push origin main`
+## Quick Start with render.yaml
 
-#### Deploy Backend to Render.com
+The easiest way to deploy is using the included `render.yaml`:
 
-1. **Sign Up**: Go to [render.com](https://render.com) and sign up with GitHub
-2. **New Web Service**: Click "New +" → "Web Service"
-3. **Connect Repository**: Select your GitHub repository
-4. **Configure Service**:
-   - **Name**: `kk-food-backend`
-   - **Root Directory**: `backend/KKFoodBilling.Backend`
-   - **Runtime**: Docker or .NET
-   - **Build Command**: `dotnet publish -c Release -o ./publish`
-   - **Start Command**: `cd publish && dotnet KKFoodBilling.Backend.dll --urls=http://0.0.0.0:10000`
-   - **Plan**: Select "Free"
-5. **Environment Variables**:
-   - `ASPNETCORE_ENVIRONMENT` = `Production`
-   - `ASPNETCORE_URLS` = `http://0.0.0.0:10000`
-6. **Deploy**: Click "Create Web Service"
-7. **Copy URL**: Note your backend URL (e.g., `https://kk-food-backend.onrender.com`)
+1. Go to [Render Dashboard](https://dashboard.render.com/)
+2. Click **New +** → **Blueprint**
+3. Connect your GitHub repository
+4. Render will automatically create:
+   - PostgreSQL database (`kk-food-postgres`)
+   - Backend API service (`kk-food-backend`)
 
-#### Deploy Frontend to Vercel
+## Manual Deployment Steps
 
-1. **Sign Up**: Go to [vercel.com](https://vercel.com) and sign up with GitHub
-2. **Import Project**: Click "Add New..." → "Project"
-3. **Select Repository**: Choose your GitHub repository
-4. **Configure**:
-   - Framework: Vite (auto-detected)
-   - Root Directory: `./`
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-5. **Environment Variables**:
-   - `VITE_API_BASE_URL` = Your Render backend URL
-6. **Deploy**: Click "Deploy"
-7. **Access**: Your app is now live at `https://your-app.vercel.app`
+### 1. Create PostgreSQL Database
 
-#### Update CORS (Important!)
-After deployment, update the Vercel URL in your backend's CORS configuration:
-1. Edit `backend/KKFoodBilling.Backend/Program.cs`
-2. Replace `https://kk-food-billing.vercel.app` with your actual Vercel URL
-3. Commit and push to GitHub
-4. Render will auto-redeploy
+1. Click **New +** → **PostgreSQL**
+2. Configure:
+   - **Name**: `kk-food-postgres`
+   - **Database**: `kkfood`
+   - **User**: `kkfood_user` (auto-generated)
+   - **Region**: Choose closest to users
+   - **Plan**: **Free**
+3. Click **Create Database**
+4. **Important**: Copy the **Internal Database URL** for later
 
-### Free Tier Limitations
+### 2. Create Backend Web Service
 
-**Render.com Backend:**
-- ⚠️  Sleeps after 15 minutes of inactivity
-- ⚠️  First request after sleep takes ~30 seconds
-- ✅ 750 instance hours/month (enough for 24/7 uptime)
-- ✅ Automatic Git deployments
+1. Click **New +** → **Web Service**
+2. Connect your GitHub repository
+3. Configure:
 
-**Vercel Frontend:**
-- ✅ 100GB bandwidth/month
-- ✅ 6000 build minutes/month
-- ✅ Global CDN
-- ✅ Automatic Git deployments
+**Basic Settings:**
+- **Name**: `kk-food-backend`
+- **Region**: Same as database
+- **Branch**: `main`
+- **Root Directory**: `backend/KKFoodBilling.Backend`
+- **Runtime**: Docker
 
-### Keep Backend Awake (Optional)
+**Build & Deploy:**
+- **Build Command**:
+  ```bash
+  dotnet publish -c Release -o ./publish
+  ```
+- **Start Command**:
+  ```bash
+  dotnet ./publish/KKFoodBilling.Backend.dll --urls=http://0.0.0.0:10000
+  ```
 
-Use [UptimeRobot](https://uptimerobot.com) (free) to ping your backend every 5 minutes:
-1. Sign up at uptimerobot.com
-2. Add monitor for your backend `/swagger` endpoint
-3. Set interval to 5 minutes
+**Environment Variables:**
+Add these environment variables:
 
----
+| Key | Value |
+|-----|-------|
+| `ASPNETCORE_ENVIRONMENT` | `Production` |
+| `ASPNETCORE_URLS` | `http://0.0.0.0:10000` |
+| `DatabaseProvider` | `PostgreSQL` |
+| `ConnectionStrings__PostgreSqlConnection` | (Paste Internal Database URL from step 1) |
 
-## Local Development
+**Instance Type:** Free
 
-### Development Mode (Recommended for Testing)
-```powershell
-.\start-dev.ps1
-```
-- Starts backend and frontend in development mode
-- Hot reload enabled for both
-- Best for development and testing
+4. Click **Create Web Service**
 
-### Production Mode
-1. **Build the application:**
-   ```powershell
-   .\build-prod.ps1
-   ```
+### 3. Verify Deployment
 
-2. **Start production servers:**
-   ```powershell
-   .\start-prod.ps1
-   ```
-   - Optimized production build
-   - Better performance
-   - Minified assets
+1. Wait for build to complete (~2-3 minutes)
+2. Check logs for "Application started" message
+3. Visit `https://your-backend.onrender.com/swagger` to verify API is running
+4. Check database tables were created:
+   - Go to your PostgreSQL service in Render
+   - Click **Connect** → **External Connection**
+   - Use provided credentials to connect via psql or pgAdmin
+   - Verify tables: `Products`, `Bills`, `BillItems`
 
-### Stop All Servers
-```powershell
-.\stop-all.ps1
-```
+## Frontend Deployment
 
-## Data Persistence
+### Option 1: Vercel (Recommended)
 
-All data is stored in JSON files located at:
-```
-backend\KKFoodBilling.Backend\Data\
-  ├── products.json  (Product inventory)
-  └── bills.json     (Sales records)
-```
+1. Go to [Vercel](https://vercel.com)
+2. Import your GitHub repository
+3. Configure:
+   - **Framework**: Vite
+   - **Root Directory**: `/` (or specify if different)
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+   - **Environment Variable**:
+     - Key: `VITE_API_BASE_URL`
+     - Value: `https://your-backend.onrender.com`
 
-**Note for Free Hosting**: Backup your JSON files regularly as free tier platforms may reset storage occasionally.
+### Option 2: Render Static Site
 
-## Endpoints
+1. Click **New +** → **Static Site**
+2. Connect repository
+3. Configure:
+   - **Build Command**: `npm install && npm run build`
+   - **Publish Directory**: `dist`
+   - **Environment Variable**: `VITE_API_BASE_URL` = backend URL
 
-### Local Development
-- **Frontend:** http://localhost:8080
-- **Backend API:** http://localhost:55219
-  - **Swagger UI:** http://localhost:55219/swagger
+## Testing the Deployment
 
-### Production (After Deployment)
-- **Frontend:** https://your-app.vercel.app
-- **Backend API:** https://your-backend.onrender.com
-  - **Swagger UI:** https://your-backend.onrender.com/swagger
+1. Visit your frontend URL
+2. Login with default credentials: `admin` / `password`
+3. Test features:
+   - Create a product in Inventory
+   - Create a bill
+   - Delete a bill (admin only)
+   - Export PDF from Inventory/Reports
+4. **Restart backend** and verify data persists
 
 ## Troubleshooting
 
-### Backend Slow to Respond (Production)
-- Normal! Free tier backends sleep after 15 minutes
-- First request after sleep takes ~30 seconds
-- Consider using UptimeRobot to keep awake
+### Database Connection Errors
+
+**Check logs** for connection issues:
+```bash
+# View logs in Render Dashboard
+# Look for "Connection refused" or "Authentication failed"
+```
+
+**Common fixes:**
+- Ensure `ConnectionStrings__PostgreSqlConnection` uses the **Internal Database URL**
+- Verify database and backend are in the **same region**
+- Check firewall settings (should be unrestricted for internal connections)
+
+### Tables Not Created
+
+If tables don't exist:
+1. Check `DatabaseInitializer` logs in backend startup
+2. Verify `DatabaseProvider` is set to `PostgreSQL`
+3. Manually create tables via psql:
+   ```sql
+   \c kkfood
+   \dt
+   -- If tables missing, check logs for errors
+   ```
 
 ### CORS Errors
-- Make sure you updated the Vercel URL in `Program.cs`
-- Redeploy backend after CORS changes
 
-### Port Already in Use (Local)
-Run `.\stop-all.ps1` first.
-
-### Backend Not Starting (Local)
-Ensure .NET SDK is installed:
-```powershell
-dotnet --version
+Update `Program.cs` if deploying frontend to a new domain:
+```csharp
+if (uri.Host.EndsWith(".onrender.com")) return true;
+if (origin == "https://your-app.vercel.app") return true;
 ```
 
-### Frontend Build Fails
-Clear cache and reinstall:
-```powershell
-npm cache clean --force
-npm install
+### Backend Cold Starts
+
+Free tier services sleep after 15 minutes of inactivity:
+- First request takes ~30-60 seconds
+- Consider upgrading to paid tier for production
+- Or use a ping service to keep it awake
+
+## Environment Configuration
+
+### Local Development (SQLite)
+```bash
+# appsettings.json
+"DatabaseProvider": "SQLite"
 ```
 
-## System Requirements
+### Production (PostgreSQL)
+```bash
+# Set in Render Environment Variables
+DATABASE_PROVIDER=PostgreSQL
+ConnectionStrings__PostgreSqlConnection=<internal_database_url>
+```
 
-- **.NET SDK:** 10.0 or higher
-- **Node.js:** 18.0 or higher
-- **npm:** 9.0 or higher
-- **Windows:** PowerShell 5.1 or higher
+## Database Migration
+
+To migrate existing SQLite data to PostgreSQL:
+
+1. Export data from local SQLite:
+   ```bash
+   # Use SQLite Browser or command:
+   sqlite3 KKFoodBilling.db .dump > data.sql
+   ```
+
+2. Convert to PostgreSQL format (adjust syntax as needed)
+
+3. Import to Render PostgreSQL:
+   ```bash
+   psql <connection_string> < data_postgresql.sql
+   ```
+
+## Next Steps
+
+- [ ] Configure custom domain
+- [ ] Set up automatic deployments via GitHub
+- [ ] Add environment-specific logging
+- [ ] Implement database backups
+- [ ] Monitor application performance
+- [ ] Add health check endpoints
+
+## Free Tier Limitations
+
+**Render Free Tier:**
+- 750 hours/month per service
+- Services sleep after 15 min inactivity
+- PostgreSQL: 90-day data retention
+- Shared CPU/RAM
+
+**Recommended for Production:**
+- Upgrade backend to paid tier ($7/month)
+- Use Render PostgreSQL starter ($7/month)
+- Deploy frontend to Vercel (free for personal projects)

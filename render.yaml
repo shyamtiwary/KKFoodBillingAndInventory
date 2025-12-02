@@ -1,4 +1,12 @@
 services:
+  # PostgreSQL Database
+  - type: pserv
+    name: kk-food-postgres
+    plan: free
+    env: docker
+    ipAllowList: []
+
+  # Backend API
   - type: web
     name: kk-food-backend
     runtime: docker
@@ -10,3 +18,9 @@ services:
         value: Production
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
+      - key: DatabaseProvider
+        value: PostgreSQL
+      - key: ConnectionStrings__PostgreSqlConnection
+        fromDatabase:
+          name: kk-food-postgres
+          property: connectionString

@@ -10,11 +10,13 @@ public class DatabaseInitializer
 {
     private readonly IDbConnectionFactory _connectionFactory;
     private readonly IWebHostEnvironment _env;
+    private readonly IConfiguration _configuration;
 
-    public DatabaseInitializer(IDbConnectionFactory connectionFactory, IWebHostEnvironment env)
+    public DatabaseInitializer(IDbConnectionFactory connectionFactory, IWebHostEnvironment env, IConfiguration configuration)
     {
         _connectionFactory = connectionFactory;
         _env = env;
+        _configuration = configuration;
     }
 
     public void Initialize()
@@ -28,47 +30,93 @@ public class DatabaseInitializer
 
     private void CreateTables(IDbConnection connection)
     {
-        // Products
-        connection.Execute(@"
-            CREATE TABLE IF NOT EXISTS Products (
-                Id TEXT PRIMARY KEY,
-                Name TEXT,
-                Sku TEXT,
-                Category TEXT,
-                CostPrice REAL,
-                SellPrice REAL,
-                Stock REAL,
-                LowStockThreshold INTEGER
-            )");
+        var provider = _configuration["DatabaseProvider"] ?? "SQLite";
+        var isPostgreSQL = provider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase);
 
-        // Bills
-        connection.Execute(@"
-            CREATE TABLE IF NOT EXISTS Bills (
-                Id TEXT PRIMARY KEY,
-                BillNumber TEXT,
-                CustomerName TEXT,
-                CustomerEmail TEXT,
-                Date TEXT,
-                Subtotal REAL,
-                DiscountAmount REAL,
-                DiscountPercentage REAL,
-                TaxAmount REAL,
-                Total REAL,
-                Status TEXT,
-                CreatedBy TEXT
-            )");
+        if (isPostgreSQL)
+        {
+            // PostgreSQL Schema
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS Products (
+                    Id TEXT PRIMARY KEY,
+                    Name TEXT,
+                    Sku TEXT,
+                    Category TEXT,
+                    CostPrice NUMERIC(10,2),
+                    SellPrice NUMERIC(10,2),
+                    Stock NUMERIC(10,2),
+                    LowStockThreshold INTEGER
+                )");
 
-        // BillItems
-        connection.Execute(@"
-            CREATE TABLE IF NOT EXISTS BillItems (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                BillId TEXT,
-                ProductId TEXT,
-                ProductName TEXT,
-                Quantity REAL,
-                Price REAL,
-                Total REAL
-            )");
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS Bills (
+                    Id TEXT PRIMARY KEY,
+                    BillNumber TEXT,
+                    CustomerName TEXT,
+                    CustomerEmail TEXT,
+                    Date TEXT,
+                    Subtotal NUMERIC(10,2),
+                    DiscountAmount NUMERIC(10,2),
+                    DiscountPercentage NUMERIC(10,2),
+                    TaxAmount NUMERIC(10,2),
+                    Total NUMERIC(10,2),
+                    Status TEXT,
+                    CreatedBy TEXT
+                )");
+
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS BillItems (
+                    Id SERIAL PRIMARY KEY,
+                    BillId TEXT,
+                    ProductId TEXT,
+                    ProductName TEXT,
+                    Quantity NUMERIC(10,2),
+                    Price NUMERIC(10,2),
+                    Total NUMERIC(10,2)
+                )");
+        }
+        else
+        {
+            // SQLite Schema
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS Products (
+                    Id TEXT PRIMARY KEY,
+                    Name TEXT,
+                    Sku TEXT,
+                    Category TEXT,
+                    CostPrice REAL,
+                    SellPrice REAL,
+                    Stock REAL,
+                    LowStockThreshold INTEGER
+                )");
+
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS Bills (
+                    Id TEXT PRIMARY KEY,
+                    BillNumber TEXT,
+                    CustomerName TEXT,
+                    CustomerEmail TEXT,
+                    Date TEXT,
+                    Subtotal REAL,
+                    DiscountAmount REAL,
+                    DiscountPercentage REAL,
+                    TaxAmount REAL,
+                    Total REAL,
+                    Status TEXT,
+                    CreatedBy TEXT
+                )");
+
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS BillItems (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    BillId TEXT,
+                    ProductId TEXT,
+                    ProductName TEXT,
+                    Quantity REAL,
+                    Price REAL,
+                    Total REAL
+                )");
+        }
     }
 
     private void SeedData(IDbConnection connection)

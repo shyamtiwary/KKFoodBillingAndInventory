@@ -23,11 +23,25 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Register Database Services
-builder.Services.AddSingleton<IDbConnectionFactory, SqliteConnectionFactory>();
-builder.Services.AddScoped<IProductRepository, SqliteProductRepository>();
-builder.Services.AddScoped<IBillRepository, SqliteBillRepository>();
+// Register Database Services based on configuration
+var databaseProvider = builder.Configuration["DatabaseProvider"] ?? "SQLite";
+
+if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddSingleton<IDbConnectionFactory, PostgreSqlConnectionFactory>();
+    builder.Services.AddScoped<IProductRepository, PostgreSqlProductRepository>();
+    builder.Services.AddScoped<IBillRepository, PostgreSqlBillRepository>();
+}
+else
+{
+    // Default to SQLite
+    builder.Services.AddSingleton<IDbConnectionFactory, SqliteConnectionFactory>();
+    builder.Services.AddScoped<IProductRepository, SqliteProductRepository>();
+    builder.Services.AddScoped<IBillRepository, SqliteBillRepository>();
+}
+
 builder.Services.AddScoped<DatabaseInitializer>();
+
 
 
 // Configure CORS
