@@ -130,8 +130,8 @@ const Bills = () => {
     const tableData = bill.items.map((item) => [
       item.productName,
       item.quantity.toString(),
-      `₹${item.price.toFixed(2)}`,
-      `₹${item.total.toFixed(2)}`,
+      `₹${(item.price || 0).toFixed(2)}`,
+      `₹${(item.total || 0).toFixed(2)}`,
     ]);
     autoTable(doc, {
       startY: 115,
@@ -143,16 +143,16 @@ const Bills = () => {
     const lastAutoTable = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable;
     const finalY = lastAutoTable && typeof lastAutoTable.finalY === "number" ? lastAutoTable.finalY : 115;
     doc.setFontSize(12);
-    doc.text(`Subtotal: ₹${bill.subtotal.toFixed(2)}`, 140, finalY + 15);
+    doc.text(`Subtotal: ₹${(bill.subtotal || 0).toFixed(2)}`, 140, finalY + 15);
     if (bill.discountAmount && bill.discountAmount > 0) {
-      doc.text(`Discount: -₹${bill.discountAmount.toFixed(2)}`, 140, finalY + 25);
-      doc.text(`Tax: ₹${bill.tax.toFixed(2)}`, 140, finalY + 35);
+      doc.text(`Discount: -₹${(bill.discountAmount || 0).toFixed(2)}`, 140, finalY + 25);
+      doc.text(`Tax: ₹${(bill.tax || 0).toFixed(2)}`, 140, finalY + 35);
       doc.setFontSize(14);
-      doc.text(`Total: ₹${bill.total.toFixed(2)}`, 140, finalY + 45);
+      doc.text(`Total: ₹${(bill.total || 0).toFixed(2)}`, 140, finalY + 45);
     } else {
-      doc.text(`Tax: ₹${bill.tax.toFixed(2)}`, 140, finalY + 25);
+      doc.text(`Tax: ₹${(bill.tax || 0).toFixed(2)}`, 140, finalY + 25);
       doc.setFontSize(14);
-      doc.text(`Total: ₹${bill.total.toFixed(2)}`, 140, finalY + 35);
+      doc.text(`Total: ₹${(bill.total || 0).toFixed(2)}`, 140, finalY + 35);
     }
     doc.save(`invoice-${bill.billNumber}.pdf`);
     toast.success("PDF downloaded successfully");
