@@ -18,9 +18,17 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [stockFilter, setStockFilter] = useState("all");
   const [products, setProducts] = useState<Product[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -45,12 +53,21 @@ const Inventory = () => {
     fetchProducts();
   }, []);
 
-  const filteredProducts = products.filter(
-    (product) =>
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      product.category.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (stockFilter === "all") return true;
+    if (stockFilter === "low") return product.stock <= product.lowStockThreshold && product.stock > 0;
+    if (stockFilter === "out") return product.stock === 0;
+    if (stockFilter === "in") return product.stock > product.lowStockThreshold;
+
+    return true;
+  });
 
   const refreshProducts = async () => {
     const allProducts = await productManager.getAll();
@@ -249,6 +266,17 @@ const Inventory = () => {
                 className="pl-10"
               />
             </div>
+            <Select value={stockFilter} onValueChange={setStockFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by Stock" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stock</SelectItem>
+                <SelectItem value="in">In Stock</SelectItem>
+                <SelectItem value="low">Low Stock</SelectItem>
+                <SelectItem value="out">Out of Stock</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
         <CardContent>

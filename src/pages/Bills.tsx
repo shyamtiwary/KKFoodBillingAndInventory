@@ -25,8 +25,12 @@ const Bills = () => {
   const { user } = useAuth();
   const [bills, setBills] = useState<Bill[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - 1);
+    return date.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
 
   useEffect(() => {

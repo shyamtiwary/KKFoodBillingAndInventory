@@ -70,3 +70,4 @@ G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\ne
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net10.0\runtimes\win-x86\native\e_sqlite3.dll
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net10.0\runtimes\win\lib\net10.0\System.Data.OleDb.dll
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net10.0\runtimes\win\lib\net10.0\System.Diagnostics.PerformanceCounter.dll
+G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net10.0\Npgsql.dll
