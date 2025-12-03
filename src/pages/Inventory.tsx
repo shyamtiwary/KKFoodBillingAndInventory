@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ const Inventory = () => {
     stock: "",
     lowStockThreshold: "",
   });
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -91,30 +92,38 @@ const Inventory = () => {
       return;
     }
 
-    const product: Product = {
-      id: await productManager.generateId(),
-      name: newProduct.name,
-      sku: newProduct.sku,
-      category: newProduct.category,
-      costPrice,
-      sellPrice,
-      stock,
-      lowStockThreshold,
-    };
+    setIsAdding(true);
+    try {
+      const product: Product = {
+        id: await productManager.generateId(),
+        name: newProduct.name,
+        sku: newProduct.sku,
+        category: newProduct.category,
+        costPrice,
+        sellPrice,
+        stock,
+        lowStockThreshold,
+      };
 
-    const addedProduct = await productManager.add(product);
-    setProducts([...products, addedProduct]);
-    setIsAddDialogOpen(false);
-    setNewProduct({
-      name: "",
-      sku: "",
-      category: "",
-      costPrice: "",
-      sellPrice: "",
-      stock: "",
-      lowStockThreshold: "",
-    });
-    toast.success("Product added successfully");
+      const addedProduct = await productManager.add(product);
+      setProducts([...products, addedProduct]);
+      setIsAddDialogOpen(false);
+      setNewProduct({
+        name: "",
+        sku: "",
+        category: "",
+        costPrice: "",
+        sellPrice: "",
+        stock: "",
+        lowStockThreshold: "",
+      });
+      toast.success("Product added successfully");
+    } catch (error) {
+      console.error("Error adding product:", error);
+      toast.error("Failed to add product");
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const handleEditProduct = async () => {
@@ -442,10 +451,12 @@ const Inventory = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isAdding}>
               Cancel
             </Button>
-            <Button onClick={handleAddProduct}>Add Product</Button>
+            <Button onClick={handleAddProduct} disabled={isAdding}>
+              {isAdding ? "Adding..." : "Add Product"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

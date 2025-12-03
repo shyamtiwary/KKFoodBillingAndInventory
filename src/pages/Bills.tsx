@@ -32,6 +32,7 @@ const Bills = () => {
   });
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     billManager.initialize();
@@ -120,44 +121,83 @@ const Bills = () => {
 
   const handleDownloadPDF = (bill: Bill) => {
     const doc = new jsPDF();
-    doc.setFontSize(20);
+    
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(40);
     doc.text("INVOICE", 105, 20, { align: "center" });
+    
+    // Bill Details
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Bill No: ${bill.billNumber}`, 14, 40);
+    doc.text(`Date: ${new Date(bill.date).toLocaleDateString()}`, 14, 46);
+    doc.text(`Status: ${bill.status.toUpperCase()}`, 14, 52);
+    
+    // Customer Details
     doc.setFontSize(12);
-    doc.text(`Bill Number: ${bill.billNumber}`, 20, 40);
-    doc.text(`Date: ${new Date(bill.date).toLocaleDateString()}`, 20, 50);
-    doc.text(`Status: ${bill.status.toUpperCase()}`, 20, 60);
-    doc.setFontSize(14);
-    doc.text("Bill To:", 20, 80);
-    doc.setFontSize(12);
-    doc.text(bill.customerName, 20, 90);
-    doc.text(bill.customerEmail, 20, 100);
+    doc.setTextColor(0);
+    doc.text("Bill To:", 14, 65);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(bill.customerName, 14, 72);
+    doc.text(bill.customerEmail, 14, 78);
+
+    // Table
     const tableData = bill.items.map((item) => [
       item.productName,
       item.quantity.toString(),
-      `₹${(item.price || 0).toFixed(2)}`,
-      `₹${(item.total || 0).toFixed(2)}`,
+      `Rs. ${(item.price || 0).toFixed(2)}`,
+      `Rs. ${(item.total || 0).toFixed(2)}`,
     ]);
+
     autoTable(doc, {
-      startY: 115,
+      startY: 90,
       head: [["Product", "Quantity", "Price", "Total"]],
       body: tableData,
       theme: "grid",
-      headStyles: { fillColor: [59, 130, 246] },
+      headStyles: { fillColor: [66, 66, 66], textColor: 255 },
+      styles: { fontSize: 10, cellPadding: 3 },
+      columnStyles: {
+        0: { cellWidth: 'auto' },
+        1: { cellWidth: 30, halign: 'center' },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 40, halign: 'right' },
+      },
     });
+
     const lastAutoTable = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable;
-    const finalY = lastAutoTable && typeof lastAutoTable.finalY === "number" ? lastAutoTable.finalY : 115;
-    doc.setFontSize(12);
-    doc.text(`Subtotal: ₹${(bill.subtotal || 0).toFixed(2)}`, 140, finalY + 15);
+    const finalY = lastAutoTable && typeof lastAutoTable.finalY === "number" ? lastAutoTable.finalY : 90;
+
+    // Totals
+    const rightMargin = 196;
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    
+    doc.text(`Subtotal:`, 140, finalY + 10);
+    doc.text(`Rs. ${(bill.subtotal || 0).toFixed(2)}`, rightMargin, finalY + 10, { align: 'right' });
+
     if (bill.discountAmount && bill.discountAmount > 0) {
-      doc.text(`Discount: -₹${(bill.discountAmount || 0).toFixed(2)}`, 140, finalY + 25);
-      doc.text(`Tax: ₹${(bill.tax || 0).toFixed(2)}`, 140, finalY + 35);
-      doc.setFontSize(14);
-      doc.text(`Total: ₹${(bill.total || 0).toFixed(2)}`, 140, finalY + 45);
+      doc.text(`Discount:`, 140, finalY + 16);
+      doc.text(`- Rs. ${(bill.discountAmount || 0).toFixed(2)}`, rightMargin, finalY + 16, { align: 'right' });
+      
+      doc.text(`Tax (0%):`, 140, finalY + 22);
+      doc.text(`Rs. ${(bill.tax || 0).toFixed(2)}`, rightMargin, finalY + 22, { align: 'right' });
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Total:`, 140, finalY + 32);
+      doc.text(`Rs. ${(bill.total || 0).toFixed(2)}`, rightMargin, finalY + 32, { align: 'right' });
     } else {
-      doc.text(`Tax: ₹${(bill.tax || 0).toFixed(2)}`, 140, finalY + 25);
-      doc.setFontSize(14);
-      doc.text(`Total: ₹${(bill.total || 0).toFixed(2)}`, 140, finalY + 35);
+      doc.text(`Tax (0%):`, 140, finalY + 16);
+      doc.text(`Rs. ${(bill.tax || 0).toFixed(2)}`, rightMargin, finalY + 16, { align: 'right' });
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Total:`, 140, finalY + 26);
+      doc.text(`Rs. ${(bill.total || 0).toFixed(2)}`, rightMargin, finalY + 26, { align: 'right' });
     }
+
     doc.save(`invoice-${bill.billNumber}.pdf`);
     toast.success("PDF downloaded successfully");
   };
@@ -173,6 +213,7 @@ const Bills = () => {
   const confirmDeleteBill = async () => {
     if (!billToDelete) return;
 
+    setIsDeleting(true);
     try {
       // Restore stock for each item in the bill
       const products = await productManager.getAll();
@@ -197,6 +238,7 @@ const Bills = () => {
       console.error("Error deleting bill:", error);
       toast.error("Failed to delete bill and restore stock");
     } finally {
+      setIsDeleting(false);
       setBillToDelete(null);
     }
   };
@@ -340,7 +382,7 @@ const Bills = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={!!billToDelete} onOpenChange={(open) => !open && setBillToDelete(null)}>
+      <Dialog open={!!billToDelete} onOpenChange={(open) => !open && !isDeleting && setBillToDelete(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
@@ -349,11 +391,11 @@ const Bills = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBillToDelete(null)}>
+            <Button variant="outline" onClick={() => setBillToDelete(null)} disabled={isDeleting}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDeleteBill}>
-              Delete Bill
+            <Button variant="destructive" onClick={confirmDeleteBill} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete Bill"}
             </Button>
           </DialogFooter>
         </DialogContent>

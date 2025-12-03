@@ -23,7 +23,7 @@ const CreateBill = () => {
   const { user } = useAuth();
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [items, setItems] = useState<BillItem[]>([{ productId: "", quantity: 0, price: 0 }]);
+  const [items, setItems] = useState<BillItem[]>([{ productId: "", quantity: 1, price: 0 }]);
   const [products, setProducts] = useState<Product[]>([]);
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,7 +39,7 @@ const CreateBill = () => {
   }, []);
 
   const addItem = () => {
-    setItems([...items, { productId: "", quantity: 0, price: 0 }]);
+    setItems([...items, { productId: "", quantity: 1, price: 0 }]);
   };
 
   const removeItem = (index: number) => {
@@ -55,16 +55,6 @@ const CreateBill = () => {
       if (value === "" || /^\d*\.?\d*$/.test(value.toString())) {
         newItems[index] = { ...newItems[index], [field]: value };
       }
-
-      // Auto-add new row if last row's quantity is changed and > 0
-      const numValue = parseFloat(value.toString());
-      if (index === items.length - 1 && !isNaN(numValue) && numValue > 0) {
-        // We'll add a new row only if the current last row has a product selected too
-        if (newItems[index].productId) {
-          newItems.push({ productId: "", quantity: 0, price: 0 });
-        }
-      }
-
     } else {
       newItems[index] = { ...newItems[index], [field]: value };
     }

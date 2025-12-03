@@ -1,6 +1,7 @@
 import { StatCard } from "@/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { DollarSign, Package, AlertTriangle, FileText, TrendingUp, IndianRupee } from "lucide-react";
 import { billManager } from "@/lib/billManager";
 import { productManager } from "@/lib/productManager";
@@ -10,6 +11,7 @@ import type { Bill, Product } from "@/data/testData";
 const Dashboard = () => {
   const [bills, setBills] = useState<Bill[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [dateFilter, setDateFilter] = useState<'today' | 'weekly' | 'monthly'>('today');
 
   useEffect(() => {
     billManager.initialize();
@@ -25,20 +27,38 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
-  // Get today's date
-  const today = new Date().toISOString().split('T')[0];
+  // Filter bills based on selected date range
+  const filteredBills = bills.filter(bill => {
+    const billDate = new Date(bill.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  // Calculate daily sales (today)
-  const todayBills = bills.filter(b => b.date === today);
-  const dailySales = todayBills.reduce((sum, bill) => sum + bill.total, 0);
-  const dailyTransactions = todayBills.length;
+    if (dateFilter === 'today') {
+      const billDateStr = billDate.toISOString().split('T')[0];
+      const todayStr = today.toISOString().split('T')[0];
+      return billDateStr === todayStr;
+    } else if (dateFilter === 'weekly') {
+      const weekAgo = new Date(today);
+      weekAgo.setDate(today.getDate() - 7);
+      return billDate >= weekAgo;
+    } else if (dateFilter === 'monthly') {
+      const monthAgo = new Date(today);
+      monthAgo.setDate(today.getDate() - 30);
+      return billDate >= monthAgo;
+    }
+    return true;
+  });
+
+  // Calculate metrics based on filtered bills
+  const sales = filteredBills.reduce((sum, bill) => sum + bill.total, 0);
+  const transactions = filteredBills.length;
 
   const totalProducts = products.length;
   const lowStockProducts = products.filter(p => p.stock <= p.lowStockThreshold);
   let costprice = 0;
   let profit = 0;
 
-  bills.forEach(bill => {
+  filteredBills.forEach(bill => {
     if (bill.status !== "paid") return;
 
     bill.items.forEach(item => {
@@ -59,53 +79,76 @@ const Dashboard = () => {
     }
   });
 
-  const totalRevenue = bills
+  const totalRevenue = filteredBills
     .filter(b => b.status === 'paid')
     .reduce((sum, bill) => sum + bill.total, 0);
-  const totalBills = bills.length;
-  const pendingBills = bills.filter(b => b.status === 'paid' || b.status === 'overdue').length;
 
-  // Calculate total inventory value
+  // Calculate total inventory value (independent of date filter)
   const inventoryValue = products.reduce((sum, p) => sum + (p.costPrice * p.stock), 0);
 
-  const recentBills = bills.slice(0, 5);
+  const recentBills = bills.slice(0, 5); // Always show most recent bills globally
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Overview of your inventory and billing
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Overview of your inventory and billing
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant={dateFilter === 'today' ? 'default' : 'outline'}
+            onClick={() => setDateFilter('today')}
+            size="sm"
+          >
+            Today
+          </Button>
+          <Button
+            variant={dateFilter === 'weekly' ? 'default' : 'outline'}
+            onClick={() => setDateFilter('weekly')}
+            size="sm"
+          >
+            Weekly
+          </Button>
+          <Button
+            variant={dateFilter === 'monthly' ? 'default' : 'outline'}
+            onClick={() => setDateFilter('monthly')}
+            size="sm"
+          >
+            Monthly
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Daily Sales"
-          value={`₹${dailySales.toFixed(2)}`}
+          title="Sales"
+          value={`₹${sales.toFixed(2)}`}
           icon={TrendingUp}
-          description={`${dailyTransactions} transactions today`}
+          description={`${transactions} transactions (${dateFilter})`}
           variant="success"
         />
         <StatCard
-          title="Total Revenue"
+          title="Revenue"
           value={`₹${totalRevenue.toFixed(2)}`}
           icon={IndianRupee}
-          description="From paid invoices"
+          description={`From paid invoices (${dateFilter})`}
           variant="success"
         />
         <StatCard
           title="Investment Cost"
           value={`₹${costprice.toFixed(2)}`}
           icon={IndianRupee}
-          description="From paid invoices"
+          description={`From paid invoices (${dateFilter})`}
           variant="success"
         />
         <StatCard
-          title="Profit Revenue"
+          title="Profit"
           value={`₹${profit.toFixed(2)}`}
           icon={IndianRupee}
-          description="From paid invoices"
+          description={`From paid invoices (${dateFilter})`}
           variant="success"
         />
         <StatCard
