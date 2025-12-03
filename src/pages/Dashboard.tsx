@@ -7,11 +7,14 @@ import { billManager } from "@/lib/billManager";
 import { productManager } from "@/lib/productManager";
 import { useState, useEffect } from "react";
 import type { Bill, Product } from "@/data/testData";
+import { DateRange } from "react-day-picker";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 
 const Dashboard = () => {
   const [bills, setBills] = useState<Bill[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [dateFilter, setDateFilter] = useState<'today' | 'weekly' | 'monthly'>('today');
+  const [dateFilter, setDateFilter] = useState<'today' | 'weekly' | 'monthly' | 'custom' | 'all'>('today');
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
     billManager.initialize();
@@ -29,6 +32,10 @@ const Dashboard = () => {
 
   // Filter bills based on selected date range
   const filteredBills = bills.filter(bill => {
+    if (dateFilter === 'all') {
+      return true; // Show all bills
+    }
+
     const billDate = new Date(bill.date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -45,6 +52,13 @@ const Dashboard = () => {
       const monthAgo = new Date(today);
       monthAgo.setDate(today.getDate() - 30);
       return billDate >= monthAgo;
+    } else if (dateFilter === 'custom' && customDateRange?.from) {
+      const from = new Date(customDateRange.from);
+      const to = new Date(customDateRange.to || customDateRange.from);
+      // Set time to start and end of day for accurate comparison
+      from.setHours(0, 0, 0, 0);
+      to.setHours(23, 59, 59, 999);
+      return billDate >= from && billDate <= to;
     }
     return true;
   });
@@ -97,7 +111,14 @@ const Dashboard = () => {
             Overview of your inventory and billing
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={dateFilter === 'all' ? 'default' : 'outline'}
+            onClick={() => setDateFilter('all')}
+            size="sm"
+          >
+            All Time
+          </Button>
           <Button
             variant={dateFilter === 'today' ? 'default' : 'outline'}
             onClick={() => setDateFilter('today')}
@@ -119,7 +140,19 @@ const Dashboard = () => {
           >
             Monthly
           </Button>
+          <Button
+            variant={dateFilter === 'custom' ? 'default' : 'outline'}
+            onClick={() => setDateFilter('custom')}
+            size="sm"
+          >
+            Custom
+          </Button>
         </div>
+        {dateFilter === 'custom' && (
+          <div className="mt-2 md:mt-0">
+            <DatePickerWithRange date={customDateRange} setDate={setCustomDateRange} />
+          </div>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
