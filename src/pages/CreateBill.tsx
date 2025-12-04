@@ -64,6 +64,11 @@ const CreateBill = () => {
       if (product) {
         newItems[index].price = product.sellPrice;
       }
+
+      // Auto-add new row if product selected in last row
+      if (index === items.length - 1) {
+        newItems.push({ productId: "", quantity: 1, price: 0 });
+      }
     }
 
     setItems(newItems);
@@ -234,9 +239,18 @@ const CreateBill = () => {
                       <Label>Product</Label>
                       <Select
                         value={item.productId}
-                        onValueChange={(value) => updateItem(index, "productId", value)}
+                        onValueChange={(value) => {
+                          updateItem(index, "productId", value);
+                          // Auto-focus quantity after product selection
+                          setTimeout(() => {
+                            const quantityInput = document.getElementById(`quantity-${index}`);
+                            if (quantityInput) {
+                              quantityInput.focus();
+                            }
+                          }, 100);
+                        }}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger id={`product-trigger-${index}`}>
                           <SelectValue placeholder="Select product" />
                         </SelectTrigger>
                         <SelectContent>
@@ -251,10 +265,28 @@ const CreateBill = () => {
                     <div className="w-full md:w-24">
                       <Label>Quantity</Label>
                       <Input
-                        type="text" // Use text to allow "1." intermediate state
+                        id={`quantity-${index}`}
+                        type="text"
                         inputMode="decimal"
                         value={item.quantity}
                         onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (index < items.length - 1) {
+                              // Focus next row's product trigger
+                              const nextTrigger = document.getElementById(`product-trigger-${index + 1}`);
+                              if (nextTrigger) nextTrigger.focus();
+                            } else {
+                              // If it's the last row and has valid data, maybe submit or just stay?
+                              // For now, let's just blur or focus the save button if needed, 
+                              // but usually user might want to review. 
+                              // If we want to submit on Enter from last row:
+                              // handleSubmit(e); 
+                              // But safer to just let them click save or Tab to discount.
+                            }
+                          }
+                        }}
                       />
                     </div>
                     <div className="w-full md:w-32">
