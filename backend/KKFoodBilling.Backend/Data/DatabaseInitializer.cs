@@ -161,8 +161,11 @@ public class DatabaseInitializer
 
     private void SeedData(IDbConnection connection)
     {
-        // Check if Products empty
-        var productCount = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM Products");
+        var provider = _configuration["DatabaseProvider"] ?? "SQLite";
+        var isPostgreSQL = provider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase);
+
+        // Check if products empty
+        var productCount = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM products");
         if (productCount == 0)
         {
             var productsPath = Path.Combine(_env.ContentRootPath, "Data", "products.json");
@@ -175,7 +178,7 @@ public class DatabaseInitializer
                     foreach (var p in products)
                     {
                         connection.Execute(@"
-                            INSERT INTO Products (Id, Name, Sku, Category, CostPrice, SellPrice, Stock, LowStockThreshold)
+                            INSERT INTO products (id, name, sku, category, costprice, sellprice, stock, lowstockthreshold)
                             VALUES (@Id, @Name, @Sku, @Category, @CostPrice, @SellPrice, @Stock, @LowStockThreshold)",
                             p);
                     }
@@ -183,8 +186,8 @@ public class DatabaseInitializer
             }
         }
         
-        // Check Bills
-        var billCount = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM Bills");
+        // Check bills
+        var billCount = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM bills");
         if (billCount == 0)
         {
             var billsPath = Path.Combine(_env.ContentRootPath, "Data", "bills.json");
@@ -198,14 +201,14 @@ public class DatabaseInitializer
                     {
                         // Insert Bill
                         connection.Execute(@"
-                            INSERT INTO Bills (Id, BillNumber, CustomerName, CustomerEmail, CustomerMobile, Date, Subtotal, DiscountAmount, DiscountPercentage, TaxAmount, Total, AmountPaid, Status, CreatedBy)
+                            INSERT INTO bills (id, billnumber, customername, customeremail, customermobile, date, subtotal, discountamount, discountpercentage, taxamount, total, amountpaid, status, createdby)
                             VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy)",
                             b);
 
                         foreach (var item in b.Items)
                         {
                             connection.Execute(@"
-                                INSERT INTO BillItems (BillId, ProductId, ProductName, Quantity, Price, Total)
+                                INSERT INTO billitems (billid, productid, productname, quantity, price, total)
                                 VALUES (@BillId, @ProductId, @ProductName, @Quantity, @Price, @Total)",
                                 new { BillId = b.Id, item.ProductId, item.ProductName, item.Quantity, item.Price, item.Total });
                         }
@@ -214,22 +217,26 @@ public class DatabaseInitializer
             }
         }
 
-        // Check Users
-        var userCount = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM Users");
+        // Check users
+        var userCount = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM users");
         if (userCount == 0)
         {
             // Seed default admin
             connection.Execute(@"
-                INSERT INTO Users (Email, Role, Name, Password, IsApproved)
-                VALUES ('admin', 'admin', 'Admin User', 'password', 1)");
+                INSERT INTO users (email, role, name, password, isapproved)
+                VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
+                new { Email = "admin", Role = "admin", Name = "Admin User", Password = "password", IsApproved = true });
             
-            // Seed default manager and staff (optional, but good for demo)
+            // Seed default manager and staff
             connection.Execute(@"
-                INSERT INTO Users (Email, Role, Name, Password, IsApproved)
-                VALUES ('manager', 'manager', 'Manager User', 'password', 1)");
+                INSERT INTO users (email, role, name, password, isapproved)
+                VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
+                new { Email = "manager", Role = "manager", Name = "Manager User", Password = "password", IsApproved = true });
+
             connection.Execute(@"
-                INSERT INTO Users (Email, Role, Name, Password, IsApproved)
-                VALUES ('staff', 'staff', 'Staff User', 'password', 1)");
+                INSERT INTO users (email, role, name, password, isapproved)
+                VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
+                new { Email = "staff", Role = "staff", Name = "Staff User", Password = "password", IsApproved = true });
         }
     }
 }
