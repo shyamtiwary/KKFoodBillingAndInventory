@@ -1,72 +1,32 @@
 import { Product } from '@/data/testData';
+import { Capacitor } from '@capacitor/core';
+import { ApiProductService, LocalProductService, IProductService } from './services/productService';
 
-import { SERVICE_URLS } from '@/config/apiConfig';
-
-const API_URL = SERVICE_URLS.INVENTORY;
+const isNative = Capacitor.isNativePlatform();
+const service: IProductService = isNative ? new LocalProductService() : new ApiProductService();
 
 export const productManager = {
-  // Initialize - no longer needed
   initialize: () => {
     // No-op
   },
 
-  // Get all products
   getAll: async (): Promise<Product[]> => {
-    try {
-      const response = await fetch(API_URL);
-
-      if (!response.ok) {
-        console.warn('Failed to fetch products from API');
-        return [];
-      }
-
-      const data = await response.json();
-      console.log('Fetched products from API:', data);
-      return data;
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      return [];
-    }
+    return await service.getAll();
   },
 
-  // Add a new product
   add: async (product: Product): Promise<Product> => {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(product),
-    });
-    return await response.json();
+    return await service.add(product);
   },
 
-  // Update a product
   update: async (id: string, updatedProduct: Partial<Product>): Promise<Product | undefined> => {
-    const response = await fetch(`${API_URL}/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updatedProduct),
-    });
-    return response.ok ? await response.json() : undefined;
+    return await service.update(id, updatedProduct);
   },
 
-  // Delete a product
   delete: async (id: string): Promise<void> => {
-    await fetch(`${API_URL}/${id}`, {
-      method: 'DELETE',
-    });
+    await service.delete(id);
   },
 
-  // Generate next product ID
   generateId: async (): Promise<string> => {
-    const products = await productManager.getAll();
-    const maxId = products.reduce((max, product) => {
-      const num = parseInt(product.id);
-      return num > max ? num : max;
-    }, 0);
-    return String(maxId + 1);
+    return await service.generateId();
   },
 };

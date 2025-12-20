@@ -31,6 +31,8 @@ if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
     builder.Services.AddSingleton<IDbConnectionFactory, PostgreSqlConnectionFactory>();
     builder.Services.AddScoped<IProductRepository, PostgreSqlProductRepository>();
     builder.Services.AddScoped<IBillRepository, PostgreSqlBillRepository>();
+    builder.Services.AddScoped<IUserRepository, PostgreSqlUserRepository>();
+    builder.Services.AddScoped<ICustomerRepository, PostgreSqlCustomerRepository>();
 }
 else
 {
@@ -38,11 +40,11 @@ else
     builder.Services.AddSingleton<IDbConnectionFactory, SqliteConnectionFactory>();
     builder.Services.AddScoped<IProductRepository, SqliteProductRepository>();
     builder.Services.AddScoped<IBillRepository, SqliteBillRepository>();
+    builder.Services.AddScoped<IUserRepository, SqliteUserRepository>();
+    builder.Services.AddScoped<ICustomerRepository, SqliteCustomerRepository>();
 }
 
 builder.Services.AddScoped<DatabaseInitializer>();
-
-
 
 // Configure CORS
 builder.Services.AddCors(options =>

@@ -43,10 +43,8 @@ G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\ne
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\SQLitePCLRaw.provider.e_sqlite3.dll
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\System.Configuration.ConfigurationManager.dll
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\System.Data.OleDb.dll
-G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\System.Diagnostics.EventLog.dll
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\System.Diagnostics.PerformanceCounter.dll
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\System.Security.Cryptography.ProtectedData.dll
-G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\System.Threading.AccessControl.dll
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\browser-wasm\nativeassets\net8.0\e_sqlite3.a
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\linux-arm\native\libe_sqlite3.so
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\linux-arm64\native\libe_sqlite3.so
@@ -54,11 +52,8 @@ G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\ne
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\linux-mips64\native\libe_sqlite3.so
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\linux-musl-arm\native\libe_sqlite3.so
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\linux-musl-arm64\native\libe_sqlite3.so
-G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\linux-musl-riscv64\native\libe_sqlite3.so
-G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\linux-musl-s390x\native\libe_sqlite3.so
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\linux-musl-x64\native\libe_sqlite3.so
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\linux-ppc64le\native\libe_sqlite3.so
-G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\linux-riscv64\native\libe_sqlite3.so
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\linux-s390x\native\libe_sqlite3.so
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\linux-x64\native\libe_sqlite3.so
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\linux-x86\native\libe_sqlite3.so
@@ -71,9 +66,5 @@ G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\ne
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\win-x64\native\e_sqlite3.dll
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\win-x86\native\e_sqlite3.dll
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Data.OleDb.dll
-G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Diagnostics.EventLog.Messages.dll
-G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Diagnostics.EventLog.dll
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Diagnostics.PerformanceCounter.dll
-G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Threading.AccessControl.dll
 G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\Npgsql.dll
-G:\Projects\KKFoodBillingAndInventory\backend\KKFoodBilling.Backend\bin\Debug\net8.0\System.Diagnostics.DiagnosticSource.dll

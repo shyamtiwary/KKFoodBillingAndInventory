@@ -1,0 +1,16 @@
+{
+    "name": "K K Foods - Inventory & Billing",
+    "short_name": "K K Foods",
+    "description": "Modern inventory management and billing system for businesses",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#3b82f6",
+    "icons": [
+        {
+            "src": "/vite.svg",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        }
+    ]
+}

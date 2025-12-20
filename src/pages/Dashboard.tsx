@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DollarSign, Package, AlertTriangle, FileText, TrendingUp, IndianRupee } from "lucide-react";
 import { billManager } from "@/lib/billManager";
 import { productManager } from "@/lib/productManager";
+import { customerManager, Customer } from "@/lib/customerManager";
 import { useState, useEffect } from "react";
 import type { Bill, Product } from "@/data/testData";
 import { DateRange } from "react-day-picker";
@@ -13,6 +14,7 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 const Dashboard = () => {
   const [bills, setBills] = useState<Bill[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [dateFilter, setDateFilter] = useState<'today' | 'weekly' | 'monthly' | 'custom' | 'all'>('today');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
 
@@ -22,10 +24,11 @@ const Dashboard = () => {
 
     const fetchData = async () => {
       const billsData = await billManager.getAll();
-      console.log('Dashboard fetched bills:', billsData);
       setBills(billsData);
       const productsData = await productManager.getAll();
       setProducts(productsData);
+      const customersData = await customerManager.getAll();
+      setCustomers(customersData);
     };
     fetchData();
   }, []);
@@ -41,9 +44,11 @@ const Dashboard = () => {
     today.setHours(0, 0, 0, 0);
 
     if (dateFilter === 'today') {
-      const billDateStr = billDate.toISOString().split('T')[0];
-      const todayStr = today.toISOString().split('T')[0];
-      return billDateStr === todayStr;
+      const startOfDay = new Date(today);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(today);
+      endOfDay.setHours(23, 59, 59, 999);
+      return billDate >= startOfDay && billDate <= endOfDay;
     } else if (dateFilter === 'weekly') {
       const weekAgo = new Date(today);
       weekAgo.setDate(today.getDate() - 7);
@@ -99,6 +104,24 @@ const Dashboard = () => {
 
   // Calculate total inventory value (independent of date filter)
   const inventoryValue = products.reduce((sum, p) => sum + (p.costPrice * p.stock), 0);
+
+  const totalPending = customers
+    .filter(c => c.balance > 0)
+    .reduce((sum, c) => sum + c.balance, 0);
+
+  const totalAdvance = customers
+    .filter(c => c.balance < 0)
+    .reduce((sum, c) => sum + Math.abs(c.balance), 0);
+
+  const topDebtors = customers
+    .filter(c => c.balance > 0)
+    .sort((a, b) => b.balance - a.balance)
+    .slice(0, 5);
+
+  const topAdvancePayers = customers
+    .filter(c => c.balance < 0)
+    .sort((a, b) => a.balance - b.balance)
+    .slice(0, 5);
 
   const recentBills = bills.slice(0, 5); // Always show most recent bills globally
 
@@ -198,6 +221,20 @@ const Dashboard = () => {
           description="Need restocking"
           variant="warning"
         />
+        <StatCard
+          title="Total Pending"
+          value={`₹${totalPending.toFixed(2)}`}
+          icon={TrendingUp}
+          description="Customer debt"
+          variant="warning"
+        />
+        <StatCard
+          title="Total Advance"
+          value={`₹${totalAdvance.toFixed(2)}`}
+          icon={IndianRupee}
+          description="Advance payments"
+          variant="success"
+        />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -267,6 +304,61 @@ const Dashboard = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-red-500" />
+              Top Pending Balances
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {topDebtors.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No pending balances!</p>
+              ) : (
+                topDebtors.map((customer) => (
+                  <div key={customer.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div>
+                      <p className="font-medium">{customer.name}</p>
+                      <p className="text-sm text-muted-foreground">{customer.mobile}</p>
+                    </div>
+                    <Badge variant="outline" className="text-red-600 border-red-600">
+                      ₹{customer.balance.toFixed(2)}
+                    </Badge>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <IndianRupee className="h-5 w-5 text-green-500" />
+              Top Advance Payments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {topAdvancePayers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No advance payments!</p>
+              ) : (
+                topAdvancePayers.map((customer) => (
+                  <div key={customer.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div>
+                      <p className="font-medium">{customer.name}</p>
+                      <p className="text-sm text-muted-foreground">{customer.mobile}</p>
+                    </div>
+                    <Badge variant="outline" className="text-green-600 border-green-600">
+                      ₹{Math.abs(customer.balance).toFixed(2)}
+                    </Badge>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

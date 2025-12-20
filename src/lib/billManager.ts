@@ -1,74 +1,33 @@
-import { Bill, bills as initialBills } from '@/data/testData';
+import { Bill } from '@/data/testData';
+import { Capacitor } from '@capacitor/core';
+import { ApiBillService, LocalBillService, IBillService } from './services/billService';
 
-const STORAGE_KEY = 'billflow_bills';
-
-import { SERVICE_URLS } from '@/config/apiConfig';
+const isNative = Capacitor.isNativePlatform();
+const service: IBillService = isNative ? new LocalBillService() : new ApiBillService();
 
 export const billManager = {
-  // Initialize - no longer needed for API but kept for compatibility
   initialize: () => {
     // No-op
   },
 
-  // Get all bills
   getAll: async (): Promise<Bill[]> => {
-    try {
-      const response = await fetch(SERVICE_URLS.BILLING);
-      if (response.ok) {
-        const bills = await response.json();
-        // Update local storage with latest from server
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(bills));
-        return bills;
-      }
-    } catch (error) {
-      console.warn('API offline, falling back to local storage for bills.');
-    }
-
-    // Fallback to local storage
-    const storedBills = localStorage.getItem(STORAGE_KEY);
-    return storedBills ? JSON.parse(storedBills) : [];
+    return await service.getAll();
   },
 
-  // Add a new bill
   add: async (bill: Bill): Promise<Bill | undefined> => {
-    // Always save to local storage first for immediate UI update and offline support
-    const bills = await billManager.getAll();
-    const updatedBills = [...bills, bill];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedBills));
-
-    try {
-      const response = await fetch(SERVICE_URLS.BILLING, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(bill),
-      });
-      return response.ok ? await response.json() : bill;
-    } catch (error) {
-      console.warn('API offline, bill saved locally only.');
-      return bill;
-    }
+    return await service.add(bill);
   },
 
-  // Generate next bill number
+  update: async (id: string, bill: Bill): Promise<Bill | undefined> => {
+    return await service.update(id, bill);
+  },
+
   generateBillNumber: async (): Promise<string> => {
-    try {
-      const bills = await billManager.getAll();
-      const maxNumber = bills.reduce((max, bill) => {
-        const num = parseInt(bill.billNumber.split('-')[1]);
-        return num > max ? num : max;
-      }, 0);
-      return `INV-${String(maxNumber + 1).padStart(3, '0')}`;
-    } catch (error) {
-      console.error('Error generating bill number:', error);
-      return 'INV-001';
-    }
+    return await service.generateBillNumber();
   },
 
-  // Export bills as JSON
   exportToJson: async () => {
-    const bills = await billManager.getAll();
+    const bills = await service.getAll();
     const dataStr = JSON.stringify(bills, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
@@ -79,21 +38,7 @@ export const billManager = {
     URL.revokeObjectURL(url);
   },
 
-  // Delete a bill
   delete: async (billId: string): Promise<boolean> => {
-    // Remove from local storage first for immediate UI update
-    const bills = await billManager.getAll();
-    const updatedBills = bills.filter(b => b.id !== billId);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedBills));
-
-    try {
-      const response = await fetch(`${SERVICE_URLS.BILLING}/${billId}`, {
-        method: 'DELETE',
-      });
-      return response.ok;
-    } catch (error) {
-      console.warn('API offline, bill deleted locally only.');
-      return true; // Return true since local deletion succeeded
-    }
+    return await service.delete(billId);
   },
 };

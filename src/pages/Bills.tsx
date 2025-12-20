@@ -20,6 +20,8 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useAuth } from "@/hooks/useAuth";
+import { Capacitor } from "@capacitor/core";
+import { downloadFile } from "@/lib/utils/fileDownloader";
 
 const Bills = () => {
   const { user } = useAuth();
@@ -33,6 +35,7 @@ const Bills = () => {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
 
   useEffect(() => {
     billManager.initialize();
@@ -40,6 +43,26 @@ const Bills = () => {
   }, []);
 
   const loadBills = async () => {
+    // Native/Offline Mode
+    if (Capacitor.isNativePlatform()) {
+      const allBills = await billManager.getAll();
+      if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        const filtered = allBills.filter(bill => {
+          const billDate = new Date(bill.date);
+          return billDate >= start && billDate <= end;
+        });
+        setBills(filtered);
+      } else {
+        setBills(allBills);
+      }
+      return;
+    }
+
+    // Web/Online Mode
     if (startDate && endDate) {
       try {
         const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:55219';
@@ -50,7 +73,9 @@ const Bills = () => {
         }
       } catch (error) {
         console.error("Error fetching filtered bills", error);
-        toast.error("Failed to fetch filtered bills");
+        // Fallback to local if API fails on web too (optional, but good for safety)
+        const data = await billManager.getAll();
+        setBills(data);
       }
     } else {
       const data = await billManager.getAll();
@@ -58,7 +83,7 @@ const Bills = () => {
     }
   };
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     const csvHeader = "Bill Number,Customer Name,Customer Email,Date,Subtotal,Discount,Tax,Total,Status\n";
     const csvRows = bills
       .map(
@@ -67,16 +92,9 @@ const Bills = () => {
       )
       .join("\n");
     const csvContent = csvHeader + csvRows;
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `bills-${new Date().toISOString().split('T')[0]}.csv`;
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("Bills exported to CSV file");
+    const fileName = `bills-${new Date().toISOString().split('T')[0]}.csv`;
+
+    await downloadFile(fileName, csvContent, "text/csv");
   };
 
   const handleExportAllData = async () => {
@@ -88,15 +106,8 @@ const Bills = () => {
       )
       .join("\n");
     const productsCsv = productsCsvHeader + productsCsvRows;
-    const productsBlob = new Blob([productsCsv], { type: "text/csv;charset=utf-8;" });
-    const productsUrl = URL.createObjectURL(productsBlob);
-    const productsLink = document.createElement("a");
-    productsLink.href = productsUrl;
-    productsLink.download = `inventory-${new Date().toISOString().split('T')[0]}.csv`;
-    productsLink.style.visibility = "hidden";
-    document.body.appendChild(productsLink);
-    productsLink.click();
-    document.body.removeChild(productsLink);
+    const productsFileName = `inventory-${new Date().toISOString().split('T')[0]}.csv`;
+    await downloadFile(productsFileName, productsCsv, "text/csv");
 
     const billsCsvHeader = "Bill Number,Customer Name,Customer Email,Date,Subtotal,Discount,Tax,Total,Status\n";
     const billsCsvRows = bills
@@ -106,34 +117,28 @@ const Bills = () => {
       )
       .join("\n");
     const billsCsv = billsCsvHeader + billsCsvRows;
-    const billsBlob = new Blob([billsCsv], { type: "text/csv;charset=utf-8;" });
-    const billsUrl = URL.createObjectURL(billsBlob);
-    const billsLink = document.createElement("a");
-    billsLink.href = billsUrl;
-    billsLink.download = `bills-${new Date().toISOString().split('T')[0]}.csv`;
-    billsLink.style.visibility = "hidden";
-    document.body.appendChild(billsLink);
-    billsLink.click();
-    document.body.removeChild(billsLink);
+    const billsFileName = `bills-${new Date().toISOString().split('T')[0]}.csv`;
+    await downloadFile(billsFileName, billsCsv, "text/csv");
 
     toast.success("All data exported (Inventory + Bills)");
   };
 
-  const handleDownloadPDF = (bill: Bill) => {
+  const handleDownloadPDF = async (bill: Bill, e?: React.MouseEvent) => {
+    e?.stopPropagation(); // Prevent row click
     const doc = new jsPDF();
-    
+
     // Header
     doc.setFontSize(22);
     doc.setTextColor(40);
     doc.text("INVOICE", 105, 20, { align: "center" });
-    
+
     // Bill Details
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Bill No: ${bill.billNumber}`, 14, 40);
     doc.text(`Date: ${new Date(bill.date).toLocaleDateString()}`, 14, 46);
     doc.text(`Status: ${bill.status.toUpperCase()}`, 14, 52);
-    
+
     // Customer Details
     doc.setFontSize(12);
     doc.setTextColor(0);
@@ -173,17 +178,17 @@ const Bills = () => {
     const rightMargin = 196;
     doc.setFontSize(10);
     doc.setTextColor(0);
-    
+
     doc.text(`Subtotal:`, 140, finalY + 10);
     doc.text(`Rs. ${(bill.subtotal || 0).toFixed(2)}`, rightMargin, finalY + 10, { align: 'right' });
 
     if (bill.discountAmount && bill.discountAmount > 0) {
       doc.text(`Discount:`, 140, finalY + 16);
       doc.text(`- Rs. ${(bill.discountAmount || 0).toFixed(2)}`, rightMargin, finalY + 16, { align: 'right' });
-      
+
       doc.text(`Tax (0%):`, 140, finalY + 22);
       doc.text(`Rs. ${(bill.tax || 0).toFixed(2)}`, rightMargin, finalY + 22, { align: 'right' });
-      
+
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
       doc.text(`Total:`, 140, finalY + 32);
@@ -191,18 +196,21 @@ const Bills = () => {
     } else {
       doc.text(`Tax (0%):`, 140, finalY + 16);
       doc.text(`Rs. ${(bill.tax || 0).toFixed(2)}`, rightMargin, finalY + 16, { align: 'right' });
-      
+
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
       doc.text(`Total:`, 140, finalY + 26);
       doc.text(`Rs. ${(bill.total || 0).toFixed(2)}`, rightMargin, finalY + 26, { align: 'right' });
     }
 
-    doc.save(`invoice-${bill.billNumber}.pdf`);
-    toast.success("PDF downloaded successfully");
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
+    const fileName = `invoice-${bill.billNumber}.pdf`;
+
+    await downloadFile(fileName, pdfBase64, "application/pdf", true);
   };
 
-  const handleDeleteClick = (bill: Bill) => {
+  const handleDeleteClick = (bill: Bill, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
     if (!user || user.role !== 'admin') {
       toast.error("Only admins can delete bills");
       return;
@@ -240,6 +248,23 @@ const Bills = () => {
     } finally {
       setIsDeleting(false);
       setBillToDelete(null);
+    }
+  };
+
+  const handleStatusChange = async (bill: Bill, newStatus: 'paid' | 'overdue') => {
+    try {
+      const updatedBill = { ...bill, status: newStatus };
+      await billManager.update(bill.id, updatedBill);
+      toast.success(`Bill ${bill.billNumber} marked as ${newStatus}`);
+
+      // Update local state
+      setBills(bills.map(b => b.id === bill.id ? updatedBill : b));
+      if (selectedBill && selectedBill.id === bill.id) {
+        setSelectedBill(updatedBill);
+      }
+    } catch (error) {
+      console.error("Error updating bill:", error);
+      toast.error("Failed to update bill status");
     }
   };
 
@@ -321,7 +346,11 @@ const Bills = () => {
               </thead>
               <tbody>
                 {filteredBills.map((bill) => (
-                  <tr key={bill.id} className="border-b hover:bg-muted/50 transition-colors">
+                  <tr
+                    key={bill.id}
+                    className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => setSelectedBill(bill)}
+                  >
                     <td className="py-3 px-4"><span className="font-mono font-semibold">{bill.billNumber}</span></td>
                     <td className="py-3 px-4">
                       <div>
@@ -352,18 +381,23 @@ const Bills = () => {
                               ? 'destructive'
                               : 'secondary'
                         }
-                        className={bill.status === 'paid' ? 'bg-accent hover:bg-accent' : ''}
+                        className={`${bill.status !== 'paid' ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''} ${bill.status === 'paid' ? 'bg-accent hover:bg-accent' : ''}`}
+                        onClick={(e) => {
+                          if (bill.status === 'paid') return; // Prevent changing if already paid
+                          e.stopPropagation();
+                          handleStatusChange(bill, 'paid');
+                        }}
                       >
                         {bill.status}
                       </Badge>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleDownloadPDF(bill)} title="Download PDF">
+                        <Button variant="ghost" size="sm" onClick={(e) => handleDownloadPDF(bill, e)} title="Download PDF">
                           <Download className="h-4 w-4" />
                         </Button>
                         {user?.role === 'admin' && (
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(bill)} title="Delete Bill" className="text-destructive hover:text-destructive">
+                          <Button variant="ghost" size="sm" onClick={(e) => handleDeleteClick(bill, e)} title="Delete Bill" className="text-destructive hover:text-destructive">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
@@ -373,6 +407,14 @@ const Bills = () => {
                 ))}
               </tbody>
             </table>
+            {filteredBills.length > 0 && (
+              <div className="border-t p-4 bg-muted/20">
+                <div className="flex justify-end items-center gap-4 text-lg font-bold">
+                  <span>Total Amount:</span>
+                  <span>₹{filteredBills.reduce((sum, bill) => sum + bill.total, 0).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
             {filteredBills.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">No bills found</p>
@@ -398,6 +440,84 @@ const Bills = () => {
               {isDeleting ? "Deleting..." : "Delete Bill"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedBill} onOpenChange={(open) => !open && setSelectedBill(null)}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Bill Details: {selectedBill?.billNumber}</DialogTitle>
+          </DialogHeader>
+          {selectedBill && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p className="font-semibold">Customer:</p>
+                  <p>{selectedBill.customerName}</p>
+                  <p className="text-muted-foreground">{selectedBill.customerEmail}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold">Date:</p>
+                  <p>{new Date(selectedBill.date).toLocaleDateString()}</p>
+                  <Badge className="mt-1">{selectedBill.status}</Badge>
+                </div>
+              </div>
+
+              <div className="border rounded-md p-2">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left pb-2">Item</th>
+                      <th className="text-right pb-2">Qty</th>
+                      <th className="text-right pb-2">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedBill.items.map((item, idx) => (
+                      <tr key={idx} className="border-b last:border-0">
+                        <td className="py-2">{item.productName}</td>
+                        <td className="text-right py-2">{item.quantity}</td>
+                        <td className="text-right py-2">₹{item.total.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span>₹{selectedBill.subtotal.toFixed(2)}</span>
+                </div>
+                {selectedBill.discountAmount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount:</span>
+                    <span>-₹{selectedBill.discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                  <span>Total:</span>
+                  <span>₹{selectedBill.total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0">
+                {selectedBill.status !== 'paid' && (
+                  <Button
+                    variant="default"
+                    className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
+                    onClick={() => handleStatusChange(selectedBill, 'paid')}
+                  >
+                    Mark as Paid
+                  </Button>
+                )}
+                <Button className="w-full sm:w-auto" onClick={() => handleDownloadPDF(selectedBill)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

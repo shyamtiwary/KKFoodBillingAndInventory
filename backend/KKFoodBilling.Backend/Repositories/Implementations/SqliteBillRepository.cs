@@ -71,8 +71,8 @@ public class SqliteBillRepository : IBillRepository
         try
         {
             const string insertBillSql = @"
-                INSERT INTO Bills (Id, BillNumber, CustomerName, CustomerEmail, Date, Subtotal, DiscountAmount, DiscountPercentage, TaxAmount, Total, Status, CreatedBy)
-                VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @Date, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @Status, @CreatedBy)";
+                INSERT INTO Bills (Id, BillNumber, CustomerName, CustomerEmail, CustomerMobile, Date, Subtotal, DiscountAmount, DiscountPercentage, TaxAmount, Total, AmountPaid, Status, CreatedBy)
+                VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy)";
 
             await connection.ExecuteAsync(insertBillSql, bill, transaction);
 

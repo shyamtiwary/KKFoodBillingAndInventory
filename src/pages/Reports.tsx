@@ -7,6 +7,9 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { FileText } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { billManager } from "@/lib/billManager";
+import { downloadFile } from "@/lib/utils/fileDownloader";
 
 interface ProductSales {
     productId: string;
@@ -20,15 +23,65 @@ const Reports = () => {
     const [startDate, setStartDate] = useState(() => {
         const date = new Date();
         date.setMonth(date.getMonth() - 1);
-        return date.toISOString().split('T')[0];
+        return date.toLocaleDateString('en-CA'); // Local YYYY-MM-DD
     });
-    const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(() => new Date().toLocaleDateString('en-CA')); // Local YYYY-MM-DD
     const [salesData, setSalesData] = useState<ProductSales[]>([]);
     const [loading, setLoading] = useState(false);
 
     const fetchReport = async () => {
         setLoading(true);
         try {
+            // Offline/Native Mode
+            if (Capacitor.isNativePlatform()) {
+                const allBills = await billManager.getAll();
+                const start = startDate ? new Date(startDate) : new Date(0);
+                // Set start to beginning of day
+                start.setHours(0, 0, 0, 0);
+
+                const end = endDate ? new Date(endDate) : new Date();
+                // Set end to end of day
+                end.setHours(23, 59, 59, 999);
+
+                const filteredBills = allBills.filter(bill => {
+                    const billDate = new Date(bill.date);
+                    return billDate >= start && billDate <= end;
+                });
+
+                // Aggregate sales by product
+                const productStats: Record<string, { name: string, qty: number, rev: number, bills: Set<string> }> = {};
+
+                filteredBills.forEach(bill => {
+                    bill.items.forEach(item => {
+                        if (!productStats[item.productId]) {
+                            productStats[item.productId] = {
+                                name: item.productName,
+                                qty: 0,
+                                rev: 0,
+                                bills: new Set()
+                            };
+                        }
+                        productStats[item.productId].qty += item.quantity;
+                        productStats[item.productId].rev += item.total;
+                        productStats[item.productId].bills.add(bill.id);
+                    });
+                });
+
+                const reportData: ProductSales[] = Object.keys(productStats).map(pid => ({
+                    productId: pid,
+                    productName: productStats[pid].name,
+                    totalQuantity: productStats[pid].qty,
+                    totalRevenue: productStats[pid].rev,
+                    invoiceCount: productStats[pid].bills.size
+                }));
+
+                setSalesData(reportData);
+                if (reportData.length === 0) {
+                    toast.info("No sales found for the selected period");
+                }
+                return;
+            }
+
             const queryParams = new URLSearchParams();
             if (startDate) queryParams.append("startDate", startDate);
             if (endDate) queryParams.append("endDate", endDate);
@@ -48,13 +101,16 @@ const Reports = () => {
             }
         } catch (error) {
             console.error("Error fetching report:", error);
-            toast.error("Error connecting to server");
+            // Fallback to local if API fails on web too
+            if (!Capacitor.isNativePlatform()) {
+                toast.error("Error connecting to server");
+            }
         } finally {
             setLoading(false);
         }
     };
 
-    const handleExportPDF = () => {
+    const handleExportPDF = async () => {
         if (salesData.length === 0) {
             toast.error("No data to export");
             return;
@@ -91,11 +147,13 @@ const Reports = () => {
             }
         });
 
-        doc.save(`sales_report_${new Date().toISOString().split('T')[0]}.pdf`);
-        toast.success("Report exported to PDF");
+        const pdfBase64 = doc.output('datauristring').split(',')[1];
+        const fileName = `sales_report_${new Date().toISOString().split('T')[0]}.pdf`;
+
+        await downloadFile(fileName, pdfBase64, "application/pdf", true);
     };
 
-    const handleExportCSV = () => {
+    const handleExportCSV = async () => {
         if (salesData.length === 0) {
             toast.error("No data to export");
             return;
@@ -110,14 +168,8 @@ const Reports = () => {
             )
         ].join("\n");
 
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `sales_report_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const fileName = `sales_report_${new Date().toISOString().split('T')[0]}.csv`;
+        await downloadFile(fileName, csvContent, "text/csv");
     };
 
     return (
@@ -134,34 +186,36 @@ const Reports = () => {
                     <CardTitle>Filter & Export</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex flex-col md:flex-row gap-4 items-end">
-                        <div className="w-full md:w-auto space-y-2">
-                            <label className="text-sm font-medium">Start Date</label>
-                            <Input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="w-full"
-                            />
+                    <div className="flex flex-col gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Start Date</label>
+                                <Input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="w-full"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">End Date</label>
+                                <Input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="w-full"
+                                />
+                            </div>
                         </div>
-                        <div className="w-full md:w-auto space-y-2">
-                            <label className="text-sm font-medium">End Date</label>
-                            <Input
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                className="w-full"
-                            />
-                        </div>
-                        <div className="flex gap-2 w-full md:w-auto">
-                            <Button onClick={fetchReport} disabled={loading} className="flex-1 md:flex-none">
+                        <div className="flex flex-col md:flex-row gap-2 pt-2">
+                            <Button onClick={fetchReport} disabled={loading} className="w-full md:w-auto md:flex-1">
                                 {loading ? "Loading..." : "Generate Report"}
                             </Button>
-                            <Button variant="outline" onClick={handleExportPDF} disabled={salesData.length === 0} className="flex-1 md:flex-none">
+                            <Button variant="outline" onClick={handleExportPDF} disabled={salesData.length === 0} className="w-full md:w-auto md:flex-1">
                                 <FileText className="h-4 w-4 mr-2" />
                                 Export PDF
                             </Button>
-                            <Button variant="outline" onClick={handleExportCSV} disabled={salesData.length === 0} className="flex-1 md:flex-none">
+                            <Button variant="outline" onClick={handleExportCSV} disabled={salesData.length === 0} className="w-full md:w-auto md:flex-1">
                                 Export CSV
                             </Button>
                         </div>

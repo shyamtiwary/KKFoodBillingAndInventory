@@ -37,42 +37,62 @@ public class DatabaseInitializer
         {
             // PostgreSQL Schema
             connection.Execute(@"
-                CREATE TABLE IF NOT EXISTS Products (
-                    Id TEXT PRIMARY KEY,
-                    Name TEXT,
-                    Sku TEXT,
-                    Category TEXT,
-                    CostPrice NUMERIC(10,2),
-                    SellPrice NUMERIC(10,2),
-                    Stock NUMERIC(10,2),
-                    LowStockThreshold INTEGER
+                CREATE TABLE IF NOT EXISTS ""Products"" (
+                    ""Id"" TEXT PRIMARY KEY,
+                    ""Name"" TEXT,
+                    ""Sku"" TEXT,
+                    ""Category"" TEXT,
+                    ""CostPrice"" NUMERIC(10,2),
+                    ""SellPrice"" NUMERIC(10,2),
+                    ""Stock"" NUMERIC(10,2),
+                    ""LowStockThreshold"" INTEGER
                 )");
 
             connection.Execute(@"
-                CREATE TABLE IF NOT EXISTS Bills (
-                    Id TEXT PRIMARY KEY,
-                    BillNumber TEXT,
-                    CustomerName TEXT,
-                    CustomerEmail TEXT,
-                    Date TEXT,
-                    Subtotal NUMERIC(10,2),
-                    DiscountAmount NUMERIC(10,2),
-                    DiscountPercentage NUMERIC(10,2),
-                    TaxAmount NUMERIC(10,2),
-                    Total NUMERIC(10,2),
-                    Status TEXT,
-                    CreatedBy TEXT
+                CREATE TABLE IF NOT EXISTS ""Bills"" (
+                    ""Id"" TEXT PRIMARY KEY,
+                    ""BillNumber"" TEXT,
+                    ""CustomerName"" TEXT,
+                    ""CustomerEmail"" TEXT,
+                    ""CustomerMobile"" TEXT,
+                    ""Date"" TEXT,
+                    ""Subtotal"" NUMERIC(10,2),
+                    ""DiscountAmount"" NUMERIC(10,2),
+                    ""DiscountPercentage"" NUMERIC(10,2),
+                    ""TaxAmount"" NUMERIC(10,2),
+                    ""Total"" NUMERIC(10,2),
+                    ""AmountPaid"" NUMERIC(10,2),
+                    ""Status"" TEXT,
+                    ""CreatedBy"" TEXT
                 )");
 
             connection.Execute(@"
-                CREATE TABLE IF NOT EXISTS BillItems (
-                    Id SERIAL PRIMARY KEY,
-                    BillId TEXT,
-                    ProductId TEXT,
-                    ProductName TEXT,
-                    Quantity NUMERIC(10,2),
-                    Price NUMERIC(10,2),
-                    Total NUMERIC(10,2)
+                CREATE TABLE IF NOT EXISTS ""BillItems"" (
+                    ""Id"" SERIAL PRIMARY KEY,
+                    ""BillId"" TEXT,
+                    ""ProductId"" TEXT,
+                    ""ProductName"" TEXT,
+                    ""Quantity"" NUMERIC(10,2),
+                    ""Price"" NUMERIC(10,2),
+                    ""Total"" NUMERIC(10,2)
+                )");
+
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS ""Users"" (
+                    ""Email"" TEXT PRIMARY KEY,
+                    ""Role"" TEXT,
+                    ""Name"" TEXT,
+                    ""Password"" TEXT,
+                    ""IsApproved"" BOOLEAN
+                )");
+
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS ""Customers"" (
+                    ""Id"" TEXT PRIMARY KEY,
+                    ""Name"" TEXT,
+                    ""Mobile"" TEXT UNIQUE,
+                    ""Email"" TEXT,
+                    ""Balance"" NUMERIC(10,2)
                 )");
         }
         else
@@ -96,12 +116,14 @@ public class DatabaseInitializer
                     BillNumber TEXT,
                     CustomerName TEXT,
                     CustomerEmail TEXT,
+                    CustomerMobile TEXT,
                     Date TEXT,
                     Subtotal REAL,
                     DiscountAmount REAL,
                     DiscountPercentage REAL,
                     TaxAmount REAL,
                     Total REAL,
+                    AmountPaid REAL,
                     Status TEXT,
                     CreatedBy TEXT
                 )");
@@ -115,6 +137,24 @@ public class DatabaseInitializer
                     Quantity REAL,
                     Price REAL,
                     Total REAL
+                )");
+
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS Users (
+                    Email TEXT PRIMARY KEY,
+                    Role TEXT,
+                    Name TEXT,
+                    Password TEXT,
+                    IsApproved INTEGER
+                )");
+
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS Customers (
+                    Id TEXT PRIMARY KEY,
+                    Name TEXT,
+                    Mobile TEXT UNIQUE,
+                    Email TEXT,
+                    Balance REAL
                 )");
         }
     }
@@ -158,8 +198,8 @@ public class DatabaseInitializer
                     {
                         // Insert Bill
                         connection.Execute(@"
-                            INSERT INTO Bills (Id, BillNumber, CustomerName, CustomerEmail, Date, Subtotal, DiscountAmount, DiscountPercentage, TaxAmount, Total, Status, CreatedBy)
-                            VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @Date, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @Status, @CreatedBy)",
+                            INSERT INTO Bills (Id, BillNumber, CustomerName, CustomerEmail, CustomerMobile, Date, Subtotal, DiscountAmount, DiscountPercentage, TaxAmount, Total, AmountPaid, Status, CreatedBy)
+                            VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy)",
                             b);
 
                         foreach (var item in b.Items)
@@ -172,6 +212,24 @@ public class DatabaseInitializer
                     }
                 }
             }
+        }
+
+        // Check Users
+        var userCount = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM Users");
+        if (userCount == 0)
+        {
+            // Seed default admin
+            connection.Execute(@"
+                INSERT INTO Users (Email, Role, Name, Password, IsApproved)
+                VALUES ('admin', 'admin', 'Admin User', 'password', 1)");
+            
+            // Seed default manager and staff (optional, but good for demo)
+            connection.Execute(@"
+                INSERT INTO Users (Email, Role, Name, Password, IsApproved)
+                VALUES ('manager', 'manager', 'Manager User', 'password', 1)");
+            connection.Execute(@"
+                INSERT INTO Users (Email, Role, Name, Password, IsApproved)
+                VALUES ('staff', 'staff', 'Staff User', 'password', 1)");
         }
     }
 }

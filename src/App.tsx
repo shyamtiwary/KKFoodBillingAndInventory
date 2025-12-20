@@ -8,10 +8,14 @@ import Index from "./pages/Index";
 import Inventory from "./pages/Inventory";
 import Bills from "./pages/Bills";
 import CreateBill from "./pages/CreateBill";
+import Customers from "./pages/Customers";
 import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./hooks/useAuth";
+import { useEffect } from "react";
+import { databaseService } from "@/lib/db/database";
 
 const queryClient = new QueryClient();
 
@@ -29,34 +33,42 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Index />} />
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="bills" element={<Bills />} />
-            <Route path="create-bill" element={<CreateBill />} />
-            <Route path="reports" element={<Reports />} />
-          </Route>
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  useEffect(() => {
+    databaseService.initialize().catch(console.error);
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Index />} />
+              <Route path="inventory" element={<Inventory />} />
+              <Route path="bills" element={<Bills />} />
+              <Route path="create-bill" element={<CreateBill />} />
+              <Route path="customers" element={<Customers />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

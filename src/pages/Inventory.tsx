@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { downloadFile } from "@/lib/utils/fileDownloader";
 
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -180,7 +181,7 @@ const Inventory = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleExportInventoryCSV = () => {
+  const handleExportInventoryCSV = async () => {
     const csvHeader = "ID,SKU,Name,Category,Cost Price,Sell Price,Stock,Low Stock Threshold\n";
     const csvRows = products
       .map(
@@ -190,19 +191,12 @@ const Inventory = () => {
       .join("\n");
 
     const csvContent = csvHeader + csvRows;
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `inventory-${new Date().toISOString().split("T")[0]}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("Inventory exported to CSV file");
+    const fileName = `inventory-${new Date().toISOString().split("T")[0]}.csv`;
+
+    await downloadFile(fileName, csvContent, "text/csv");
   };
 
-  const handleExportInventoryPDF = () => {
+  const handleExportInventoryPDF = async () => {
     const doc = new jsPDF();
 
     // Title
@@ -234,31 +228,36 @@ const Inventory = () => {
       headStyles: { fillColor: [66, 66, 66] }
     });
 
-    doc.save(`inventory-${new Date().toISOString().split('T')[0]}.pdf`);
-    toast.success("Inventory exported to PDF file");
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
+    const fileName = `inventory-${new Date().toISOString().split('T')[0]}.pdf`;
+
+    await downloadFile(fileName, pdfBase64, "application/pdf", true);
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Inventory</h1>
           <p className="text-muted-foreground mt-1">
             Manage your product inventory
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={handleExportInventoryPDF}>
             <FileText className="h-4 w-4 mr-2" />
-            Export PDF
+            <span className="hidden sm:inline">Export PDF</span>
+            <span className="sm:hidden">PDF</span>
           </Button>
           <Button variant="outline" onClick={handleExportInventoryCSV}>
             <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">CSV</span>
           </Button>
           <Button onClick={() => setIsAddDialogOpen(true)}>
             <Package className="h-4 w-4 mr-2" />
-            Add Product
+            <span className="hidden sm:inline">Add Product</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
       </div>

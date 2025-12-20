@@ -6,38 +6,65 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { LogIn } from 'lucide-react';
+import { LogIn, UserPlus } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, user, isLoading } = useAuth();
+  const [name, setName] = useState('');
+  const [isRegister, setIsRegister] = useState(false);
+  const { login, register, user, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     if (!isLoading && user) {
-      navigate('/', { replace: true });
+      if (user.isApproved) {
+        navigate('/', { replace: true });
+      } else {
+        toast({
+          title: 'Account Pending',
+          description: 'Your account is waiting for admin approval.',
+          variant: 'default',
+        });
+      }
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const success = await login(email, password);
-
-    if (success) {
-      toast({
-        title: 'Login successful',
-        description: 'Welcome back!',
-      });
-      navigate('/');
+    if (isRegister) {
+      const result = await register(email, password, name);
+      if (result.success) {
+        toast({
+          title: 'Registration successful',
+          description: result.message,
+        });
+        setIsRegister(false);
+      } else {
+        toast({
+          title: 'Registration failed',
+          description: result.message,
+          variant: 'destructive',
+        });
+      }
     } else {
-      toast({
-        title: 'Login failed',
-        description: 'Invalid email or password',
-        variant: 'destructive',
-      });
+      const result = await login(email, password);
+
+      if (result.success) {
+        toast({
+          title: 'Login successful',
+          description: 'Welcome back!',
+        });
+        navigate('/');
+      } else {
+        toast({
+          title: 'Login failed',
+          description: result.message || 'Invalid email or password',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -47,20 +74,39 @@ const Login = () => {
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <LogIn className="h-6 w-6 text-primary" />
+              {isRegister ? <UserPlus className="h-6 w-6 text-primary" /> : <LogIn className="h-6 w-6 text-primary" />}
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">BillFlow Login</CardTitle>
-          <CardDescription>Enter your credentials to access the system</CardDescription>
+          <CardTitle className="text-2xl font-bold">
+            {isRegister ? 'Create Account' : 'BillFlow Login'}
+          </CardTitle>
+          <CardDescription>
+            {isRegister
+              ? 'Enter your details to request access'
+              : 'Enter your credentials to access the system'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {isRegister && (
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Enter your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email / Username</Label>
               <Input
                 id="email"
                 type="text"
-                placeholder="Enter User Name"
+                placeholder="Enter email or username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -78,18 +124,31 @@ const Login = () => {
               />
             </div>
             <Button type="submit" className="w-full">
-              Sign In
+              {isRegister ? 'Register' : 'Sign In'}
             </Button>
           </form>
-          <div className="mt-6 p-4 bg-muted rounded-md">
-            <p className="text-sm font-medium text-muted-foreground mb-2">Demo Credentials:</p>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              <p>• Admin: admin</p>
-              <p>• Manager: manager</p>
-              <p>• Staff: staff</p>
-              <p className="mt-2">Password: <span className="font-mono">password</span></p>
-            </div>
+
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => setIsRegister(!isRegister)}
+              className="text-sm text-primary hover:underline"
+            >
+              {isRegister ? 'Already have an account? Sign In' : 'Need an account? Register here'}
+            </button>
           </div>
+
+          {!isRegister && (
+            <div className="mt-6 p-4 bg-muted rounded-md">
+              <p className="text-sm font-medium text-muted-foreground mb-2">Demo Credentials:</p>
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p>• Admin: admin</p>
+                <p>• Manager: manager</p>
+                <p>• Staff: staff</p>
+                <p className="mt-2">Password: <span className="font-mono">password</span></p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

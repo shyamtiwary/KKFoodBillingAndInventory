@@ -1,5 +1,5 @@
 import { NavLink } from "@/components/NavLink";
-import { LayoutDashboard, Package, FileText, Plus, LogOut } from "lucide-react";
+import { LayoutDashboard, Package, FileText, Plus, LogOut, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, UserRole } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,13 @@ const navItems = [
     title: "Dashboard",
     href: "/",
     icon: LayoutDashboard,
-    roles: ['admin', 'manager'] as UserRole[],
+    roles: ['admin', 'manager', 'staff'] as UserRole[],
   },
   {
     title: "Inventory",
     href: "/inventory",
     icon: Package,
-    roles: ['admin', 'manager'] as UserRole[],
+    roles: ['admin', 'manager', 'staff'] as UserRole[],
   },
   {
     title: "Bills",
@@ -31,10 +31,22 @@ const navItems = [
     roles: ['admin', 'manager', 'staff'] as UserRole[],
   },
   {
+    title: "Customers",
+    href: "/customers",
+    icon: Users,
+    roles: ['admin', 'manager', 'staff'] as UserRole[],
+  },
+  {
     title: "Reports",
     href: "/reports",
     icon: FileText,
-    roles: ['admin', 'manager'] as UserRole[],
+    roles: ['admin', 'manager', 'staff'] as UserRole[],
+  },
+  {
+    title: "Settings",
+    href: "/settings",
+    icon: Settings,
+    roles: ['admin', 'manager', 'staff'] as UserRole[],
   },
 ];
 

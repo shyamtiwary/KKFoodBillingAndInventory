@@ -1,4 +1,5 @@
 using KKFoodBilling.Backend.Models;
+using KKFoodBilling.Backend.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KKFoodBilling.Backend.Controllers;
@@ -7,22 +8,49 @@ namespace KKFoodBilling.Backend.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    [HttpPost("login")]
-    public ActionResult<User> Login(LoginRequest request)
-    {
-        // Mock authentication
-        var mockUsers = new Dictionary<string, User>
-        {
-            { "admin", new User { Email = "admin", Role = "admin", Name = "Admin User" } },
-            { "manager", new User { Email = "manager", Role = "manager", Name = "Manager User" } },
-            { "staff", new User { Email = "staff", Role = "staff", Name = "Staff User" } }
-        };
+    private readonly IUserRepository _userRepository;
 
-        if (mockUsers.TryGetValue(request.Email, out var user) && request.Password == "password")
+    public AuthController(IUserRepository userRepository)
+    {
+        _userRepository = userRepository;
+    }
+
+    [HttpPost("login")]
+    public async Task<ActionResult<User>> Login(LoginRequest request)
+    {
+        var user = await _userRepository.GetByEmailAsync(request.Email);
+
+        if (user != null && user.Password == request.Password)
         {
+            if (!user.IsApproved)
+            {
+                return Forbid("Account pending approval");
+            }
             return Ok(user);
         }
 
         return Unauthorized();
+    }
+
+    [HttpPost("register")]
+    public async Task<ActionResult<User>> Register(RegisterRequest request)
+    {
+        var existingUser = await _userRepository.GetByEmailAsync(request.Email);
+        if (existingUser != null)
+        {
+            return BadRequest("User already exists");
+        }
+
+        var newUser = new User
+        {
+            Email = request.Email,
+            Name = request.Name,
+            Password = request.Password,
+            Role = "staff", // Default role
+            IsApproved = false // Requires approval
+        };
+
+        await _userRepository.AddAsync(newUser);
+        return Ok(newUser);
     }
 }

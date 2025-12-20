@@ -6,6 +6,7 @@ public class Bill
     public string BillNumber { get; set; } = string.Empty;
     public string CustomerName { get; set; } = string.Empty;
     public string CustomerEmail { get; set; } = string.Empty;
+    public string CustomerMobile { get; set; } = string.Empty;
     public string Date { get; set; } = string.Empty;
     public List<BillItem> Items { get; set; } = new();
     public decimal Subtotal { get; set; }
@@ -13,6 +14,7 @@ public class Bill
     public decimal DiscountPercentage { get; set; }
     public decimal TaxAmount { get; set; }
     public decimal Total { get; set; }
+    public decimal AmountPaid { get; set; }
     public string Status { get; set; } = "paid";
     public string CreatedBy { get; set; } = string.Empty;
 }
