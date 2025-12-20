@@ -19,7 +19,7 @@ public class PostgreSqlUserRepository : IUserRepository
     {
         using var connection = _connectionFactory.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<User>(
-            "SELECT * FROM users WHERE email = @Email", new { Email = email });
+            "SELECT * FROM users WHERE LOWER(email) = LOWER(@Email)", new { Email = email });
     }
 
     public async Task<IEnumerable<User>> GetAllAsync()

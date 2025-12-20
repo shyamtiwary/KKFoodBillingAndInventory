@@ -218,29 +218,46 @@ public class DatabaseInitializer
         }
 
         // Check users
-        var userCount = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM users");
-        Console.WriteLine($"[DatabaseInitializer] Current user count: {userCount}");
-        if (userCount == 0)
+        var users = connection.Query<User>("SELECT * FROM users").ToList();
+        Console.WriteLine($"[DatabaseInitializer] Current user count: {users.Count}");
+        
+        // Ensure default admin exists
+        var adminUser = users.FirstOrDefault(u => u.Email.ToLower() == "admin");
+        if (adminUser == null)
         {
-            Console.WriteLine("[DatabaseInitializer] Seeding default users...");
-            // Seed default admin
+            Console.WriteLine("[DatabaseInitializer] Admin user missing. Seeding admin...");
             connection.Execute(@"
                 INSERT INTO users (email, role, name, password, isapproved)
                 VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
                 new { Email = "admin", Role = "admin", Name = "Admin User", Password = "password", IsApproved = true });
-            
-            // Seed default manager and staff
-            connection.Execute(@"
-                INSERT INTO users (email, role, name, password, isapproved)
-                VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
-                new { Email = "manager", Role = "manager", Name = "Manager User", Password = "password", IsApproved = true });
+        }
+        else if (adminUser.Password == "password" || string.IsNullOrEmpty(adminUser.Password))
+        {
+            // Ensure default admin has 'password' if it was somehow corrupted or empty
+            connection.Execute("UPDATE users SET password = 'password', isapproved = true WHERE email = 'admin'");
+        }
 
-            connection.Execute(@"
-                INSERT INTO users (email, role, name, password, isapproved)
-                VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
-                new { Email = "staff", Role = "staff", Name = "Staff User", Password = "password", IsApproved = true });
+        if (users.Count <= 1) // Only seed others if it's a fresh DB or only admin exists
+        {
+            Console.WriteLine("[DatabaseInitializer] Seeding default manager and staff...");
             
-            Console.WriteLine("[DatabaseInitializer] Default users seeded successfully.");
+            if (!users.Any(u => u.Email.ToLower() == "manager"))
+            {
+                connection.Execute(@"
+                    INSERT INTO users (email, role, name, password, isapproved)
+                    VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
+                    new { Email = "manager", Role = "manager", Name = "Manager User", Password = "password", IsApproved = true });
+            }
+
+            if (!users.Any(u => u.Email.ToLower() == "staff"))
+            {
+                connection.Execute(@"
+                    INSERT INTO users (email, role, name, password, isapproved)
+                    VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
+                    new { Email = "staff", Role = "staff", Name = "Staff User", Password = "password", IsApproved = true });
+            }
+            
+            Console.WriteLine("[DatabaseInitializer] Default users checked/seeded successfully.");
         }
     }
 }

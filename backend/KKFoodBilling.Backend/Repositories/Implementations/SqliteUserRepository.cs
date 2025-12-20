@@ -19,7 +19,7 @@ public class SqliteUserRepository : IUserRepository
     {
         using var connection = _connectionFactory.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<User>(
-            "SELECT * FROM Users WHERE Email = @Email", new { Email = email });
+            "SELECT * FROM Users WHERE LOWER(Email) = LOWER(@Email)", new { Email = email });
     }
 
     public async Task<IEnumerable<User>> GetAllAsync()
