@@ -68,7 +68,7 @@ export const useAuth = () => {
       throw new Error("Server error");
 
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error at', `${SERVICE_URLS.AUTH}/login`, ':', error);
 
       // Offline/Native Fallback
       if (Capacitor.isNativePlatform()) {
@@ -118,13 +118,14 @@ export const useAuth = () => {
         }
       }
 
-      return { success: false, message: 'Server connection failed' };
+      return { success: false, message: `Server connection failed at ${SERVICE_URLS.AUTH}/login` };
     }
   };
 
   const register = async (email: string, password: string, name: string): Promise<{ success: boolean; message?: string }> => {
+    const url = `${SERVICE_URLS.AUTH}/register`;
     try {
-      const response = await fetch(`${SERVICE_URLS.AUTH}/register`, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,12 +136,18 @@ export const useAuth = () => {
       if (response.ok) {
         return { success: true, message: 'Registration successful. Waiting for admin approval.' };
       } else {
-        const error = await response.text();
-        return { success: false, message: error || 'Registration failed' };
+        let errorMessage = 'Registration failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData || errorMessage;
+        } catch (e) {
+          errorMessage = await response.text() || errorMessage;
+        }
+        return { success: false, message: errorMessage };
       }
     } catch (error) {
-      console.error('Registration error:', error);
-      return { success: false, message: 'Server connection failed' };
+      console.error('Registration error at', url, ':', error);
+      return { success: false, message: `Server connection failed. Please check if the backend is running at ${url}` };
     }
   };
 

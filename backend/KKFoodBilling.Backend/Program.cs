@@ -54,15 +54,20 @@ builder.Services.AddCors(options =>
         {
             policy.SetIsOriginAllowed(origin => 
                 {
+                    if (string.IsNullOrWhiteSpace(origin)) return false;
+                    
                     var uri = new Uri(origin);
-                    // Allow localhost
+                    // Allow localhost (Web dev and Mobile)
                     if (uri.Host == "localhost") return true;
+                    // Allow Capacitor iOS
+                    if (origin.StartsWith("capacitor://")) return true;
                     // Allow specific production domain
-                    if (origin == "https://kk-food-billing-and-inventory.vercel.app") return true;
+                    if (origin.TrimEnd('/') == "https://kk-food-billing-and-inventory.vercel.app") return true;
                     // Allow any vercel.app subdomain (for previews)
                     if (uri.Host.EndsWith(".vercel.app")) return true;
                     // Allow Render backend (for health checks and Swagger)
                     if (uri.Host.EndsWith(".onrender.com")) return true;
+                    
                     return false;
                 })
                 .AllowAnyHeader()
@@ -84,6 +89,8 @@ if (builder.Environment.IsDevelopment())
 }
 
 var app = builder.Build();
+
+app.UseCors("AllowFrontend");
 
 // Initialize Database
 using (var scope = app.Services.CreateScope())
@@ -110,8 +117,6 @@ app.UseSwaggerUI(c =>
 });
 
 // app.UseHttpsRedirection(); // Disabled for HTTP communication
-
-app.UseCors("AllowFrontend");
 
 app.UseAuthorization();
 
