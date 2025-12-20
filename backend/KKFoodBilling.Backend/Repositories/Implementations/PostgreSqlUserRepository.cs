@@ -19,20 +19,20 @@ public class PostgreSqlUserRepository : IUserRepository
     {
         using var connection = _connectionFactory.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<User>(
-            "SELECT * FROM Users WHERE \"Email\" = @Email", new { Email = email });
+            "SELECT * FROM users WHERE email = @Email", new { Email = email });
     }
 
     public async Task<IEnumerable<User>> GetAllAsync()
     {
         using var connection = _connectionFactory.CreateConnection();
-        return await connection.QueryAsync<User>("SELECT * FROM Users");
+        return await connection.QueryAsync<User>("SELECT * FROM users");
     }
 
     public async Task AddAsync(User user)
     {
         using var connection = _connectionFactory.CreateConnection();
         await connection.ExecuteAsync(@"
-            INSERT INTO Users (""Email"", ""Role"", ""Name"", ""Password"", ""IsApproved"")
+            INSERT INTO users (email, role, name, password, isapproved)
             VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
             user);
     }
@@ -41,9 +41,9 @@ public class PostgreSqlUserRepository : IUserRepository
     {
         using var connection = _connectionFactory.CreateConnection();
         await connection.ExecuteAsync(@"
-            UPDATE Users 
-            SET ""Role"" = @Role, ""Name"" = @Name, ""Password"" = @Password, ""IsApproved"" = @IsApproved
-            WHERE ""Email"" = @Email",
+            UPDATE users 
+            SET role = @Role, name = @Name, password = @Password, isapproved = @IsApproved
+            WHERE email = @Email",
             user);
     }
 
@@ -51,7 +51,7 @@ public class PostgreSqlUserRepository : IUserRepository
     {
         using var connection = _connectionFactory.CreateConnection();
         var rowsAffected = await connection.ExecuteAsync(
-            "DELETE FROM Users WHERE \"Email\" = @Email", new { Email = email });
+            "DELETE FROM users WHERE email = @Email", new { Email = email });
         return rowsAffected > 0;
     }
 }

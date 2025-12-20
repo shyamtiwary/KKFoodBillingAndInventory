@@ -35,64 +35,64 @@ public class DatabaseInitializer
 
         if (isPostgreSQL)
         {
-            // PostgreSQL Schema
+            // PostgreSQL Schema (Lowercase for case-insensitivity)
             connection.Execute(@"
-                CREATE TABLE IF NOT EXISTS ""Products"" (
-                    ""Id"" TEXT PRIMARY KEY,
-                    ""Name"" TEXT,
-                    ""Sku"" TEXT,
-                    ""Category"" TEXT,
-                    ""CostPrice"" NUMERIC(10,2),
-                    ""SellPrice"" NUMERIC(10,2),
-                    ""Stock"" NUMERIC(10,2),
-                    ""LowStockThreshold"" INTEGER
+                CREATE TABLE IF NOT EXISTS products (
+                    id TEXT PRIMARY KEY,
+                    name TEXT,
+                    sku TEXT,
+                    category TEXT,
+                    costprice NUMERIC(10,2),
+                    sellprice NUMERIC(10,2),
+                    stock NUMERIC(10,2),
+                    lowstockthreshold INTEGER
                 )");
 
             connection.Execute(@"
-                CREATE TABLE IF NOT EXISTS ""Bills"" (
-                    ""Id"" TEXT PRIMARY KEY,
-                    ""BillNumber"" TEXT,
-                    ""CustomerName"" TEXT,
-                    ""CustomerEmail"" TEXT,
-                    ""CustomerMobile"" TEXT,
-                    ""Date"" TEXT,
-                    ""Subtotal"" NUMERIC(10,2),
-                    ""DiscountAmount"" NUMERIC(10,2),
-                    ""DiscountPercentage"" NUMERIC(10,2),
-                    ""TaxAmount"" NUMERIC(10,2),
-                    ""Total"" NUMERIC(10,2),
-                    ""AmountPaid"" NUMERIC(10,2),
-                    ""Status"" TEXT,
-                    ""CreatedBy"" TEXT
+                CREATE TABLE IF NOT EXISTS bills (
+                    id TEXT PRIMARY KEY,
+                    billnumber TEXT,
+                    customername TEXT,
+                    customeremail TEXT,
+                    customermobile TEXT,
+                    date TEXT,
+                    subtotal NUMERIC(10,2),
+                    discountamount NUMERIC(10,2),
+                    discountpercentage NUMERIC(10,2),
+                    taxamount NUMERIC(10,2),
+                    total NUMERIC(10,2),
+                    amountpaid NUMERIC(10,2),
+                    status TEXT,
+                    createdby TEXT
                 )");
 
             connection.Execute(@"
-                CREATE TABLE IF NOT EXISTS ""BillItems"" (
-                    ""Id"" SERIAL PRIMARY KEY,
-                    ""BillId"" TEXT,
-                    ""ProductId"" TEXT,
-                    ""ProductName"" TEXT,
-                    ""Quantity"" NUMERIC(10,2),
-                    ""Price"" NUMERIC(10,2),
-                    ""Total"" NUMERIC(10,2)
+                CREATE TABLE IF NOT EXISTS billitems (
+                    id SERIAL PRIMARY KEY,
+                    billid TEXT,
+                    productid TEXT,
+                    productname TEXT,
+                    quantity NUMERIC(10,2),
+                    price NUMERIC(10,2),
+                    total NUMERIC(10,2)
                 )");
 
             connection.Execute(@"
-                CREATE TABLE IF NOT EXISTS ""Users"" (
-                    ""Email"" TEXT PRIMARY KEY,
-                    ""Role"" TEXT,
-                    ""Name"" TEXT,
-                    ""Password"" TEXT,
-                    ""IsApproved"" BOOLEAN
+                CREATE TABLE IF NOT EXISTS users (
+                    email TEXT PRIMARY KEY,
+                    role TEXT,
+                    name TEXT,
+                    password TEXT,
+                    isapproved BOOLEAN
                 )");
 
             connection.Execute(@"
-                CREATE TABLE IF NOT EXISTS ""Customers"" (
-                    ""Id"" TEXT PRIMARY KEY,
-                    ""Name"" TEXT,
-                    ""Mobile"" TEXT UNIQUE,
-                    ""Email"" TEXT,
-                    ""Balance"" NUMERIC(10,2)
+                CREATE TABLE IF NOT EXISTS customers (
+                    id TEXT PRIMARY KEY,
+                    name TEXT,
+                    mobile TEXT UNIQUE,
+                    email TEXT,
+                    balance NUMERIC(10,2)
                 )");
         }
         else

@@ -18,11 +18,11 @@ public class PostgreSqlBillRepository : IBillRepository
     public async Task<IEnumerable<Bill>> GetAllAsync()
     {
         using var connection = _connectionFactory.CreateConnection();
-        var bills = await connection.QueryAsync<Bill>("SELECT * FROM Bills ORDER BY Date DESC");
+        var bills = await connection.QueryAsync<Bill>("SELECT * FROM bills ORDER BY date DESC");
         
         if (bills.Any())
         {
-            var items = await connection.QueryAsync<dynamic>("SELECT * FROM BillItems");
+            var items = await connection.QueryAsync<dynamic>("SELECT * FROM billitems");
             var itemsLookup = items.ToLookup(i => (string)i.billid);
 
             foreach (var bill in bills)
@@ -44,11 +44,11 @@ public class PostgreSqlBillRepository : IBillRepository
     public async Task<Bill?> GetByIdAsync(string id)
     {
         using var connection = _connectionFactory.CreateConnection();
-        var bill = await connection.QueryFirstOrDefaultAsync<Bill>("SELECT * FROM Bills WHERE Id = @Id", new { Id = id });
+        var bill = await connection.QueryFirstOrDefaultAsync<Bill>("SELECT * FROM bills WHERE id = @Id", new { Id = id });
         
         if (bill != null)
         {
-            var items = await connection.QueryAsync<dynamic>("SELECT * FROM BillItems WHERE BillId = @BillId", new { BillId = id });
+            var items = await connection.QueryAsync<dynamic>("SELECT * FROM billitems WHERE billid = @BillId", new { BillId = id });
             bill.Items = items.Select(i => new BillItem
             {
                 ProductId = i.productid,
@@ -71,13 +71,13 @@ public class PostgreSqlBillRepository : IBillRepository
         try
         {
             const string insertBillSql = @"
-                INSERT INTO Bills (Id, BillNumber, CustomerName, CustomerEmail, CustomerMobile, Date, Subtotal, DiscountAmount, DiscountPercentage, TaxAmount, Total, AmountPaid, Status, CreatedBy)
+                INSERT INTO bills (id, billnumber, customername, customeremail, customermobile, date, subtotal, discountamount, discountpercentage, taxamount, total, amountpaid, status, createdby)
                 VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy)";
 
             await connection.ExecuteAsync(insertBillSql, bill, transaction);
 
             const string insertItemSql = @"
-                INSERT INTO BillItems (BillId, ProductId, ProductName, Quantity, Price, Total)
+                INSERT INTO billitems (billid, productid, productname, quantity, price, total)
                 VALUES (@BillId, @ProductId, @ProductName, @Quantity, @Price, @Total)";
 
             foreach (var item in bill.Items)
@@ -112,11 +112,11 @@ public class PostgreSqlBillRepository : IBillRepository
         try
         {
             // Delete bill items first (foreign key constraint)
-            const string deleteItemsSql = "DELETE FROM BillItems WHERE BillId = @BillId";
+            const string deleteItemsSql = "DELETE FROM billitems WHERE billid = @BillId";
             await connection.ExecuteAsync(deleteItemsSql, new { BillId = id }, transaction);
 
             // Delete the bill
-            const string deleteBillSql = "DELETE FROM Bills WHERE Id = @Id";
+            const string deleteBillSql = "DELETE FROM bills WHERE id = @Id";
             var rows = await connection.ExecuteAsync(deleteBillSql, new { Id = id }, transaction);
 
             transaction.Commit();
