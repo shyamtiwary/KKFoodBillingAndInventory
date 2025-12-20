@@ -54,13 +54,13 @@ builder.Services.AddCors(options =>
         {
             policy.SetIsOriginAllowed(origin => 
                 {
-                    if (string.IsNullOrWhiteSpace(origin)) return false;
+                    if (string.IsNullOrWhiteSpace(origin)) return true; // Allow no origin (e.g. mobile apps)
                     
                     var uri = new Uri(origin);
                     // Allow localhost (Web dev and Mobile)
                     if (uri.Host == "localhost") return true;
-                    // Allow Capacitor iOS
-                    if (origin.StartsWith("capacitor://")) return true;
+                    // Allow Capacitor origins
+                    if (origin.StartsWith("capacitor://") || origin.StartsWith("http://localhost")) return true;
                     // Allow specific production domain
                     if (origin.TrimEnd('/') == "https://kk-food-billing-and-inventory.vercel.app") return true;
                     // Allow any vercel.app subdomain (for previews)

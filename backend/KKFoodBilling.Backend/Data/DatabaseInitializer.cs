@@ -219,8 +219,10 @@ public class DatabaseInitializer
 
         // Check users
         var userCount = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM users");
+        Console.WriteLine($"[DatabaseInitializer] Current user count: {userCount}");
         if (userCount == 0)
         {
+            Console.WriteLine("[DatabaseInitializer] Seeding default users...");
             // Seed default admin
             connection.Execute(@"
                 INSERT INTO users (email, role, name, password, isapproved)
@@ -237,6 +239,8 @@ public class DatabaseInitializer
                 INSERT INTO users (email, role, name, password, isapproved)
                 VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
                 new { Email = "staff", Role = "staff", Name = "Staff User", Password = "password", IsApproved = true });
+            
+            Console.WriteLine("[DatabaseInitializer] Default users seeded successfully.");
         }
     }
 }
