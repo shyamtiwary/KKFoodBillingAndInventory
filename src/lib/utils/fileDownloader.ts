@@ -19,6 +19,13 @@ export const downloadFile = async (
     try {
         if (Capacitor.isNativePlatform()) {
             try {
+                // Request permissions first
+                try {
+                    await Filesystem.requestPermissions();
+                } catch (permError) {
+                    console.warn("Permission request failed or rejected:", permError);
+                }
+
                 // Try saving directly to the public Download folder
                 await Filesystem.writeFile({
                     path: `Download/${fileName}`,
@@ -29,23 +36,38 @@ export const downloadFile = async (
                 });
                 toast.success("Saved to Downloads folder");
             } catch (e) {
-                console.error("Direct download failed, falling back to share:", e);
-                // Fallback: Write to Cache and Share
-                const savedFile = await Filesystem.writeFile({
-                    path: fileName,
-                    data: data,
-                    directory: Directory.Cache,
-                    encoding: isBase64 ? undefined : Encoding.UTF8,
-                });
+                console.error("Direct download to Downloads failed:", e);
 
-                await Share.share({
-                    title: `Share ${fileName}`,
-                    text: `Here is your file: ${fileName}`,
-                    url: savedFile.uri,
-                    dialogTitle: `Save or Share ${fileName}`,
-                });
+                try {
+                    // Fallback: Try Documents folder
+                    await Filesystem.writeFile({
+                        path: `Documents/${fileName}`,
+                        data: data,
+                        directory: Directory.ExternalStorage,
+                        encoding: isBase64 ? undefined : Encoding.UTF8,
+                        recursive: true
+                    });
+                    toast.success("Saved to Documents folder");
+                } catch (docError) {
+                    console.error("Fallback to Documents failed:", docError);
 
-                toast.info("Could not save directly. Please use 'Save to Files' option.");
+                    // Final Fallback: Write to Cache and Share
+                    const savedFile = await Filesystem.writeFile({
+                        path: fileName,
+                        data: data,
+                        directory: Directory.Cache,
+                        encoding: isBase64 ? undefined : Encoding.UTF8,
+                    });
+
+                    await Share.share({
+                        title: `Share ${fileName}`,
+                        text: `Here is your file: ${fileName}`,
+                        url: savedFile.uri,
+                        dialogTitle: `Save or Share ${fileName}`,
+                    });
+
+                    toast.info("Could not save directly. Please use 'Save to Files' option.");
+                }
             }
         } else {
             // Web: Use <a> tag download

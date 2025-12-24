@@ -14,6 +14,18 @@ interface BackupData {
     users: any[];
 }
 
+// Helper to process array in chunks
+const processInChunks = async <T>(
+    items: T[],
+    chunkSize: number,
+    processItem: (item: T) => Promise<void>
+) => {
+    for (let i = 0; i < items.length; i += chunkSize) {
+        const chunk = items.slice(i, i + chunkSize);
+        await Promise.all(chunk.map(processItem));
+    }
+};
+
 export const dataManager = {
     backupData: async () => {
         try {
@@ -40,7 +52,12 @@ export const dataManager = {
             };
 
             const jsonContent = JSON.stringify(backup, null, 2);
-            const fileName = `backup-${new Date().toISOString().split("T")[0]}.json`;
+
+            // Format: backup-YYYY-MM-DD_HH-mm-ss.json
+            const now = new Date();
+            const dateStr = now.toISOString().split("T")[0];
+            const timeStr = now.toTimeString().split(" ")[0].replace(/:/g, "-");
+            const fileName = `backup-${dateStr}_${timeStr}.json`;
 
             await downloadFile(fileName, jsonContent, "application/json");
             return true;
@@ -63,53 +80,60 @@ export const dataManager = {
                         throw new Error("Invalid backup file format");
                     }
 
+                    const CHUNK_SIZE = 50;
+
                     // Restore Products (Smart Merge)
                     let productsCount = 0;
                     const existingProducts = await productManager.getAll();
-                    for (const product of data.products) {
-                        const exists = existingProducts.find(p => p.id === product.id);
-                        if (exists) {
+                    const existingProductIds = new Set(existingProducts.map(p => p.id));
+
+                    await processInChunks(data.products, CHUNK_SIZE, async (product) => {
+                        if (existingProductIds.has(product.id)) {
                             await productManager.update(product.id, product);
                         } else {
                             await productManager.add(product);
                         }
                         productsCount++;
-                    }
+                    });
 
                     // Restore Bills (Smart Merge)
                     let billsCount = 0;
                     const existingBills = await billManager.getAll();
-                    for (const bill of data.bills) {
-                        const exists = existingBills.find(b => b.id === bill.id);
-                        if (!exists) {
+                    const existingBillIds = new Set(existingBills.map(b => b.id));
+
+                    await processInChunks(data.bills, CHUNK_SIZE, async (bill) => {
+                        if (!existingBillIds.has(bill.id)) {
                             await billManager.add(bill);
                             billsCount++;
                         }
-                    }
+                    });
 
                     // Restore Customers (Smart Merge)
                     let customersCount = 0;
                     if (data.customers) {
                         const existingCustomers = await customerManager.getAll();
-                        for (const customer of data.customers) {
-                            const exists = existingCustomers.find(c => c.id === customer.id || c.mobile === customer.mobile);
-                            if (exists) {
-                                await customerManager.update(exists.id, customer);
+                        const existingCustomerMap = new Map(); // Map ID/Mobile to ID
+                        existingCustomers.forEach(c => {
+                            existingCustomerMap.set(c.id, c.id);
+                            existingCustomerMap.set(c.mobile, c.id);
+                        });
+
+                        await processInChunks(data.customers, CHUNK_SIZE, async (customer) => {
+                            const existingId = existingCustomerMap.get(customer.id) || existingCustomerMap.get(customer.mobile);
+                            if (existingId) {
+                                await customerManager.update(existingId, customer);
                             } else {
                                 await customerManager.add(customer);
                             }
                             customersCount++;
-                        }
+                        });
                     }
 
                     // Restore Users (Smart Merge)
                     let usersCount = 0;
                     if (data.users && data.users.length > 0) {
-                        for (const user of data.users) {
+                        await processInChunks(data.users, CHUNK_SIZE, async (user) => {
                             try {
-                                // Try to register/add user via API if not exists
-                                // This is a bit tricky as we don't have a bulk upsert for users
-                                // For now, we'll just log or attempt a POST to register (might fail if exists)
                                 await fetch(`${SERVICE_URLS.AUTH}/register`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -119,7 +143,7 @@ export const dataManager = {
                             } catch (e) {
                                 // Ignore failures (e.g. user already exists)
                             }
-                        }
+                        });
                     }
 
                     resolve({ productsCount, billsCount, customersCount, usersCount });

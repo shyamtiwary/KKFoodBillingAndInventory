@@ -9,3 +9,8 @@ export const billStore = localforage.createInstance({
     name: 'KKFoodBilling',
     storeName: 'bills',
 });
+
+export const customerStore = localforage.createInstance({
+    name: 'KKFoodBilling',
+    storeName: 'customers',
+});

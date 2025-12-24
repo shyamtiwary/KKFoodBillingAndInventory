@@ -10,37 +10,100 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Download, Plus, FileSpreadsheet, Trash2 } from "lucide-react";
+import { Search, Download, Plus, FileSpreadsheet, Trash2, FileText } from "lucide-react";
 import { billManager } from "@/lib/billManager";
 import { productManager } from "@/lib/productManager";
+import { customerManager } from "@/lib/customerManager";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import type { Bill } from "@/data/testData";
 import { toast } from "sonner";
+import { formatAmount } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useAuth } from "@/hooks/useAuth";
 import { Capacitor } from "@capacitor/core";
 import { downloadFile } from "@/lib/utils/fileDownloader";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+type TimeFilter = "Today" | "This Week" | "Last Week" | "This Month" | "This Year" | "Last Year" | "All Time" | "Custom";
 
 const Bills = () => {
   const { user } = useAuth();
   const [bills, setBills] = useState<Bill[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [startDate, setStartDate] = useState(() => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - 1);
-    return date.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("This Month");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [billToUpdateStatus, setBillToUpdateStatus] = useState<Bill | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
 
   useEffect(() => {
     billManager.initialize();
-    loadBills();
+    updateDateRange(timeFilter);
   }, []);
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      loadBills();
+    }
+  }, [startDate, endDate]);
+
+  const updateDateRange = (filter: TimeFilter) => {
+    const now = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    switch (filter) {
+      case "Today":
+        start = now;
+        end = now;
+        break;
+      case "This Week":
+        const day = now.getDay();
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+        start = new Date(now.setDate(diff));
+        end = new Date();
+        break;
+      case "Last Week":
+        const lastWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        const lastWeekDay = lastWeek.getDay();
+        const lastWeekDiff = lastWeek.getDate() - lastWeekDay + (lastWeekDay === 0 ? -6 : 1);
+        start = new Date(lastWeek.setDate(lastWeekDiff));
+        end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+        break;
+      case "This Month":
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      case "This Year":
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31);
+        break;
+      case "Last Year":
+        start = new Date(now.getFullYear() - 1, 0, 1);
+        end = new Date(now.getFullYear() - 1, 11, 31);
+        break;
+      case "All Time":
+        start = new Date(2000, 0, 1); // Arbitrary past date
+        end = now;
+        break;
+      case "Custom":
+        // Don't change dates, let user pick
+        return;
+    }
+
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
+  };
+
+  const handleFilterChange = (value: TimeFilter) => {
+    setTimeFilter(value);
+    updateDateRange(value);
+  };
 
   const loadBills = async () => {
     // Native/Offline Mode
@@ -83,19 +146,7 @@ const Bills = () => {
     }
   };
 
-  const handleExportCSV = async () => {
-    const csvHeader = "Bill Number,Customer Name,Customer Email,Date,Subtotal,Discount,Tax,Total,Status\n";
-    const csvRows = bills
-      .map(
-        (bill) =>
-          `${bill.billNumber},${bill.customerName},${bill.customerEmail},${bill.date},${bill.subtotal},${bill.discountAmount || 0},${bill.tax},${bill.total},${bill.status}`
-      )
-      .join("\n");
-    const csvContent = csvHeader + csvRows;
-    const fileName = `bills-${new Date().toISOString().split('T')[0]}.csv`;
 
-    await downloadFile(fileName, csvContent, "text/csv");
-  };
 
   const handleExportAllData = async () => {
     const products = await productManager.getAll();
@@ -110,7 +161,7 @@ const Bills = () => {
     await downloadFile(productsFileName, productsCsv, "text/csv");
 
     const billsCsvHeader = "Bill Number,Customer Name,Customer Email,Date,Subtotal,Discount,Tax,Total,Status\n";
-    const billsCsvRows = bills
+    const billsCsvRows = filteredBills
       .map(
         (bill) =>
           `${bill.billNumber},${bill.customerName},${bill.customerEmail},${bill.date},${bill.subtotal},${bill.discountAmount || 0},${bill.tax},${bill.total},${bill.status}`
@@ -121,6 +172,65 @@ const Bills = () => {
     await downloadFile(billsFileName, billsCsv, "text/csv");
 
     toast.success("All data exported (Inventory + Bills)");
+  };
+
+  const handleExportPDF = async () => {
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(18);
+    doc.setTextColor(40);
+    doc.text("Bills Report", 14, 22);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 28);
+    doc.text(`Filter: ${timeFilter} (${startDate} to ${endDate})`, 14, 34);
+
+    // Table
+    const tableData = filteredBills.map((bill) => [
+      bill.billNumber,
+      bill.customerName,
+      new Date(bill.date).toLocaleDateString(),
+      `Rs. ${bill.total.toFixed(2)}`,
+      bill.status.toUpperCase(),
+    ]);
+
+    autoTable(doc, {
+      startY: 40,
+      head: [["Bill #", "Customer", "Date", "Total", "Status"]],
+      body: tableData,
+      theme: "grid",
+      headStyles: { fillColor: [66, 66, 66], textColor: 255 },
+      styles: { fontSize: 9, cellPadding: 2 },
+    });
+
+    const lastAutoTable = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable;
+    const finalY = lastAutoTable && typeof lastAutoTable.finalY === "number" ? lastAutoTable.finalY : 40;
+
+    // Summary
+    const totalAmount = filteredBills.reduce((sum, bill) => sum + bill.total, 0);
+    const totalPaid = filteredBills.reduce((sum, bill) => {
+      const advance = bill.amountPaid !== undefined ? bill.amountPaid : (bill.status === 'paid' ? bill.total : 0);
+      return sum + advance;
+    }, 0);
+    const totalPending = totalAmount - totalPaid;
+
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text("Summary", 14, finalY + 10);
+
+    doc.setFontSize(10);
+    doc.text(`Total Bills: ${filteredBills.length}`, 14, finalY + 16);
+    doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 14, finalY + 22);
+    doc.text(`Total Paid/Advance: Rs. ${totalPaid.toFixed(2)}`, 14, finalY + 28);
+    doc.text(`Total Pending: Rs. ${totalPending.toFixed(2)}`, 14, finalY + 34);
+
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
+    const fileName = `bills-report-${new Date().toISOString().split('T')[0]}.pdf`;
+
+    await downloadFile(fileName, pdfBase64, "application/pdf", true);
+    toast.success("Bills report PDF exported");
   };
 
   const handleDownloadPDF = async (bill: Bill, e?: React.MouseEvent) => {
@@ -251,20 +361,46 @@ const Bills = () => {
     }
   };
 
-  const handleStatusChange = async (bill: Bill, newStatus: 'paid' | 'overdue') => {
+  const handleStatusChangeClick = (bill: Bill, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (bill.status === 'paid') return;
+    setBillToUpdateStatus(bill);
+  };
+
+  const confirmStatusChange = async () => {
+    if (!billToUpdateStatus) return;
+
+    setIsUpdatingStatus(true);
     try {
-      const updatedBill = { ...bill, status: newStatus };
-      await billManager.update(bill.id, updatedBill);
-      toast.success(`Bill ${bill.billNumber} marked as ${newStatus}`);
+      const updatedBill = {
+        ...billToUpdateStatus,
+        status: 'paid' as const,
+        amountPaid: billToUpdateStatus.total // Assume full payment when marking as paid
+      };
+
+      await billManager.update(billToUpdateStatus.id, updatedBill);
+      toast.success(`Bill ${billToUpdateStatus.billNumber} marked as paid`);
 
       // Update local state
-      setBills(bills.map(b => b.id === bill.id ? updatedBill : b));
-      if (selectedBill && selectedBill.id === bill.id) {
+      setBills(bills.map(b => b.id === billToUpdateStatus.id ? updatedBill : b));
+      if (selectedBill && selectedBill.id === billToUpdateStatus.id) {
         setSelectedBill(updatedBill);
       }
+
+      // Update customer balance if applicable
+      if (billToUpdateStatus.customerMobile) {
+        const pendingAmount = billToUpdateStatus.total - (billToUpdateStatus.amountPaid || 0);
+        if (pendingAmount > 0) {
+          await customerManager.updateBalance(billToUpdateStatus.customerMobile, -pendingAmount);
+        }
+      }
+
     } catch (error) {
       console.error("Error updating bill:", error);
       toast.error("Failed to update bill status");
+    } finally {
+      setIsUpdatingStatus(false);
+      setBillToUpdateStatus(null);
     }
   };
 
@@ -284,10 +420,14 @@ const Bills = () => {
             Manage and view all your bills
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={handleExportAllData}>
             <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Export All Data
+            Export CSV
+          </Button>
+          <Button variant="outline" onClick={handleExportPDF}>
+            <FileText className="h-4 w-4 mr-2" />
+            Export PDF
           </Button>
           <Link to="/create-bill">
             <Button>
@@ -310,22 +450,42 @@ const Bills = () => {
                 className="pl-10"
               />
             </div>
-            <div className="flex flex-col md:flex-row gap-2">
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full md:w-auto"
-              />
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full md:w-auto"
-              />
-              <Button variant="secondary" onClick={loadBills}>
-                Filter
-              </Button>
+            <div className="flex flex-col md:flex-row gap-2 items-center">
+              <Select value={timeFilter} onValueChange={(val) => handleFilterChange(val as TimeFilter)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select period" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Today">Today</SelectItem>
+                  <SelectItem value="This Week">This Week</SelectItem>
+                  <SelectItem value="Last Week">Last Week</SelectItem>
+                  <SelectItem value="This Month">This Month</SelectItem>
+                  <SelectItem value="This Year">This Year</SelectItem>
+                  <SelectItem value="Last Year">Last Year</SelectItem>
+                  <SelectItem value="All Time">All Time</SelectItem>
+                  <SelectItem value="Custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {timeFilter === 'Custom' && (
+                <>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full md:w-auto"
+                  />
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full md:w-auto"
+                  />
+                  <Button variant="secondary" onClick={loadBills}>
+                    Filter
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -336,75 +496,78 @@ const Bills = () => {
                 <tr className="border-b">
                   <th className="text-left py-3 px-4 font-semibold">Bill #</th>
                   <th className="text-left py-3 px-4 font-semibold">Customer</th>
-                  <th className="text-left py-3 px-4 font-semibold">Created By</th>
-                  <th className="text-left py-3 px-4 font-semibold">Date</th>
+                  <th className="text-left py-3 px-4 font-semibold">Date & Time</th>
                   <th className="text-right py-3 px-4 font-semibold">Discount</th>
-                  <th className="text-right py-3 px-4 font-semibold">Amount</th>
+                  <th className="text-right py-3 px-4 font-semibold">Total</th>
+                  <th className="text-right py-3 px-4 font-semibold">Advance</th>
+                  <th className="text-right py-3 px-4 font-semibold">Pending</th>
                   <th className="text-center py-3 px-4 font-semibold">Status</th>
                   <th className="text-center py-3 px-4 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredBills.map((bill) => (
-                  <tr
-                    key={bill.id}
-                    className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => setSelectedBill(bill)}
-                  >
-                    <td className="py-3 px-4"><span className="font-mono font-semibold">{bill.billNumber}</span></td>
-                    <td className="py-3 px-4">
-                      <div>
-                        <p className="font-medium">{bill.customerName}</p>
-                        <p className="text-sm text-muted-foreground">{bill.customerEmail}</p>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-sm">
-                      {bill.createdBy || "Unknown"}
-                    </td>
-                    <td className="py-3 px-4 text-muted-foreground">
-                      {new Date(bill.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      {bill.discountAmount && bill.discountAmount > 0 ? (
-                        <span className="text-green-600 font-medium">-₹{bill.discountAmount.toFixed(2)}</span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-right font-semibold">₹{bill.total.toFixed(2)}</td>
-                    <td className="py-3 px-4 text-center">
-                      <Badge
-                        variant={
-                          bill.status === 'paid'
-                            ? 'default'
-                            : bill.status === 'overdue'
-                              ? 'destructive'
-                              : 'secondary'
-                        }
-                        className={`${bill.status !== 'paid' ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''} ${bill.status === 'paid' ? 'bg-accent hover:bg-accent' : ''}`}
-                        onClick={(e) => {
-                          if (bill.status === 'paid') return; // Prevent changing if already paid
-                          e.stopPropagation();
-                          handleStatusChange(bill, 'paid');
-                        }}
-                      >
-                        {bill.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={(e) => handleDownloadPDF(bill, e)} title="Download PDF">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        {user?.role === 'admin' && (
-                          <Button variant="ghost" size="sm" onClick={(e) => handleDeleteClick(bill, e)} title="Delete Bill" className="text-destructive hover:text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                {filteredBills.map((bill) => {
+                  const advance = bill.amountPaid !== undefined ? bill.amountPaid : (bill.status === 'paid' ? bill.total : 0);
+                  const pending = bill.total - advance;
+
+                  return (
+                    <tr
+                      key={bill.id}
+                      className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedBill(bill)}
+                    >
+                      <td className="py-3 px-4"><span className="font-mono font-semibold">{bill.billNumber}</span></td>
+                      <td className="py-3 px-4">
+                        <div>
+                          <p className="font-medium">{bill.customerName}</p>
+                          <p className="text-sm text-muted-foreground">{bill.customerMobile}</p>
+                          <p className="text-sm text-muted-foreground">{bill.customerEmail}</p>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-muted-foreground">
+                        {bill.datetime ? (
+                          <>
+                            <div>{new Date(bill.datetime).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
+                            <div className="text-xs text-muted-foreground">{new Date(bill.datetime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+                          </>
+                        ) : (
+                          new Date(bill.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-3 px-4 text-right text-green-600">₹{bill.discountAmount ? bill.discountAmount.toFixed(2) : '0.00'}</td>
+                      <td className="py-3 px-4 text-right font-semibold">₹{bill.total.toFixed(2)}</td>
+                      <td className="py-3 px-4 text-right text-green-600">₹{advance.toFixed(2)}</td>
+                      <td className="py-3 px-4 text-right text-red-600">₹{formatAmount(pending)}</td>
+                      <td className="py-3 px-4 text-center">
+                        <Badge
+                          variant={
+                            bill.status === 'paid'
+                              ? 'default'
+                              : bill.status === 'overdue'
+                                ? 'destructive'
+                                : 'secondary'
+                          }
+                          className={`${bill.status !== 'paid' ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''} ${bill.status === 'paid' ? 'bg-accent hover:bg-accent' : ''}`}
+                          onClick={(e) => handleStatusChangeClick(bill, e)}
+                        >
+                          {bill.status}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <Button variant="ghost" size="sm" onClick={(e) => handleDownloadPDF(bill, e)} title="Download PDF">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          {user?.role === 'admin' && (
+                            <Button variant="ghost" size="sm" onClick={(e) => handleDeleteClick(bill, e)} title="Delete Bill" className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             {filteredBills.length > 0 && (
@@ -438,6 +601,26 @@ const Bills = () => {
             </Button>
             <Button variant="destructive" onClick={confirmDeleteBill} disabled={isDeleting}>
               {isDeleting ? "Deleting..." : "Delete Bill"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!billToUpdateStatus} onOpenChange={(open) => !open && !isUpdatingStatus && setBillToUpdateStatus(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Status Change</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to mark bill {billToUpdateStatus?.billNumber} as PAID?
+              This will record a payment of ₹{(billToUpdateStatus?.total || 0) - (billToUpdateStatus?.amountPaid || 0)} and update the customer's balance.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBillToUpdateStatus(null)} disabled={isUpdatingStatus}>
+              Cancel
+            </Button>
+            <Button onClick={confirmStatusChange} disabled={isUpdatingStatus}>
+              {isUpdatingStatus ? "Updating..." : "Confirm Paid"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -499,6 +682,18 @@ const Bills = () => {
                   <span>Total:</span>
                   <span>₹{selectedBill.total.toFixed(2)}</span>
                 </div>
+
+                {/* Payment Breakdown */}
+                <div className="pt-2 mt-2 border-t border-dashed">
+                  <div className="flex justify-between text-green-600">
+                    <span>Advance / Paid:</span>
+                    <span>₹{(selectedBill.amountPaid !== undefined ? selectedBill.amountPaid : (selectedBill.status === 'paid' ? selectedBill.total : 0)).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-red-600 font-medium">
+                    <span>Pending:</span>
+                    <span>₹{(selectedBill.total - (selectedBill.amountPaid !== undefined ? selectedBill.amountPaid : (selectedBill.status === 'paid' ? selectedBill.total : 0))).toFixed(2)}</span>
+                  </div>
+                </div>
               </div>
 
               <DialogFooter className="gap-2 sm:gap-0">
@@ -506,7 +701,7 @@ const Bills = () => {
                   <Button
                     variant="default"
                     className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
-                    onClick={() => handleStatusChange(selectedBill, 'paid')}
+                    onClick={(e) => handleStatusChangeClick(selectedBill, e)}
                   >
                     Mark as Paid
                   </Button>

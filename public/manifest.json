@@ -1,6 +1,6 @@
 {
-    "name": "K K Foods - Inventory & Billing",
-    "short_name": "K K Foods",
+    "name": "KK Foods - Inventory & Billing",
+    "short_name": "KK Foods",
     "description": "Modern inventory management and billing system for businesses",
     "start_url": "/",
     "display": "standalone",

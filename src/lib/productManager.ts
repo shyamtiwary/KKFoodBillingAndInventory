@@ -1,6 +1,6 @@
 import { Product } from '@/data/testData';
 import { Capacitor } from '@capacitor/core';
-import { ApiProductService, LocalProductService, IProductService } from './services/productService';
+import { ApiProductService, LocalProductService, WebProductService, IProductService } from './services/productService';
 
 const isNative = Capacitor.isNativePlatform();
 const service: IProductService = isNative ? new LocalProductService() : new ApiProductService();

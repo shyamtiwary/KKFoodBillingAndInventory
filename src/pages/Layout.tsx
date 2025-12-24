@@ -27,7 +27,7 @@ const Layout = () => {
               <SidebarContent />
             </SheetContent>
           </Sheet>
-          <h1 className="font-bold text-lg">K K Foods</h1>
+          <h1 className="font-bold text-lg">KK Foods</h1>
         </header>
 
         <div className="flex-1 p-4 md:p-8 overflow-x-hidden">

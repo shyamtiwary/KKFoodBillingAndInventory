@@ -59,6 +59,48 @@ export class ApiProductService implements IProductService {
     }
 }
 
+import { productStore } from '../storage/localStore';
+
+export class WebProductService implements IProductService {
+    async getAll(): Promise<Product[]> {
+        const products = await productStore.getItem<Product[]>('products');
+        return products || [];
+    }
+
+    async add(product: Product): Promise<Product> {
+        const products = await this.getAll();
+        const updated = [...products, product];
+        await productStore.setItem('products', updated);
+        return product;
+    }
+
+    async update(id: string, product: Partial<Product>): Promise<Product | undefined> {
+        const products = await this.getAll();
+        const index = products.findIndex(p => p.id === id);
+        if (index === -1) return undefined;
+
+        const updatedProduct = { ...products[index], ...product };
+        products[index] = updatedProduct;
+        await productStore.setItem('products', products);
+        return updatedProduct;
+    }
+
+    async delete(id: string): Promise<void> {
+        const products = await this.getAll();
+        const filtered = products.filter(p => p.id !== id);
+        await productStore.setItem('products', filtered);
+    }
+
+    async generateId(): Promise<string> {
+        const products = await this.getAll();
+        const maxId = products.reduce((max, product) => {
+            const num = parseInt(product.id);
+            return num > max ? num : max;
+        }, 0);
+        return String(maxId + 1);
+    }
+}
+
 import { databaseService } from '@/lib/db/database';
 
 export class LocalProductService implements IProductService {

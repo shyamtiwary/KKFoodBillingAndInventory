@@ -10,6 +10,7 @@ import { FileText } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { billManager } from "@/lib/billManager";
 import { downloadFile } from "@/lib/utils/fileDownloader";
+import { formatAmount, formatQuantity } from "@/lib/utils";
 
 interface ProductSales {
     productId: string;
@@ -129,8 +130,8 @@ const Reports = () => {
         const tableColumn = ["Product Name", "Quantity Sold", "Revenue", "Invoice Count"];
         const tableRows = salesData.map(item => [
             item.productName,
-            item.totalQuantity.toString(),
-            item.totalRevenue.toFixed(2),
+            formatQuantity(item.totalQuantity),
+            formatAmount(item.totalRevenue),
             item.invoiceCount.toString()
         ]);
 
@@ -249,8 +250,8 @@ const Reports = () => {
                                     salesData.map((item) => (
                                         <TableRow key={item.productId}>
                                             <TableCell className="font-medium">{item.productName}</TableCell>
-                                            <TableCell className="text-right">{item.totalQuantity}</TableCell>
-                                            <TableCell className="text-right">₹{item.totalRevenue.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">{formatQuantity(item.totalQuantity)}</TableCell>
+                                            <TableCell className="text-right">₹{formatAmount(item.totalRevenue)}</TableCell>
                                             <TableCell className="text-right">{item.invoiceCount}</TableCell>
                                         </TableRow>
                                     ))

@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import type { Bill, Product } from "@/data/testData";
 import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { formatAmount, formatQuantity } from "@/lib/utils";
 
 const Dashboard = () => {
   const [bills, setBills] = useState<Bill[]>([]);
@@ -181,35 +182,35 @@ const Dashboard = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Sales"
-          value={`₹${sales.toFixed(2)}`}
+          value={`₹${formatAmount(sales)}`}
           icon={TrendingUp}
           description={`${transactions} transactions (${dateFilter})`}
           variant="success"
         />
         <StatCard
           title="Revenue"
-          value={`₹${totalRevenue.toFixed(2)}`}
+          value={`₹${formatAmount(totalRevenue)}`}
           icon={IndianRupee}
           description={`From paid invoices (${dateFilter})`}
           variant="success"
         />
         <StatCard
           title="Investment Cost"
-          value={`₹${costprice.toFixed(2)}`}
+          value={`₹${formatAmount(costprice)}`}
           icon={IndianRupee}
           description={`From paid invoices (${dateFilter})`}
           variant="success"
         />
         <StatCard
           title="Profit"
-          value={`₹${profit.toFixed(2)}`}
+          value={`₹${formatAmount(profit)}`}
           icon={IndianRupee}
           description={`From paid invoices (${dateFilter})`}
           variant="success"
         />
         <StatCard
           title="Inventory Value"
-          value={`₹${inventoryValue.toFixed(2)}`}
+          value={`₹${formatAmount(inventoryValue)}`}
           icon={Package}
           description={`${totalProducts} products`}
           variant="default"
@@ -223,14 +224,14 @@ const Dashboard = () => {
         />
         <StatCard
           title="Total Pending"
-          value={`₹${totalPending.toFixed(2)}`}
+          value={`₹${formatAmount(totalPending)}`}
           icon={TrendingUp}
           description="Customer debt"
           variant="warning"
         />
         <StatCard
           title="Total Advance"
-          value={`₹${totalAdvance.toFixed(2)}`}
+          value={`₹${formatAmount(totalAdvance)}`}
           icon={IndianRupee}
           description="Advance payments"
           variant="success"
@@ -260,7 +261,7 @@ const Dashboard = () => {
                       <p className="text-sm text-muted-foreground">{product.sku}</p>
                     </div>
                     <Badge variant="outline" className="text-warning border-warning">
-                      {product.stock} left
+                      {formatQuantity(product.stock)} left
                     </Badge>
                   </div>
                 ))
@@ -288,7 +289,7 @@ const Dashboard = () => {
                     <p className="text-sm text-muted-foreground">{bill.customerName}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">₹{bill.total.toFixed(2)}</p>
+                    <p className="font-semibold">₹{formatAmount(bill.total)}</p>
                     <Badge
                       variant={
                         bill.status === 'paid'
@@ -326,7 +327,7 @@ const Dashboard = () => {
                       <p className="text-sm text-muted-foreground">{customer.mobile}</p>
                     </div>
                     <Badge variant="outline" className="text-red-600 border-red-600">
-                      ₹{customer.balance.toFixed(2)}
+                      ₹{formatAmount(customer.balance)}
                     </Badge>
                   </div>
                 ))
@@ -354,7 +355,7 @@ const Dashboard = () => {
                       <p className="text-sm text-muted-foreground">{customer.mobile}</p>
                     </div>
                     <Badge variant="outline" className="text-green-600 border-green-600">
-                      ₹{Math.abs(customer.balance).toFixed(2)}
+                      ₹{formatAmount(Math.abs(customer.balance))}
                     </Badge>
                   </div>
                 ))

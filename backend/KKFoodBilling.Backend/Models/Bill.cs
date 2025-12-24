@@ -8,6 +8,7 @@ public class Bill
     public string CustomerEmail { get; set; } = string.Empty;
     public string CustomerMobile { get; set; } = string.Empty;
     public string Date { get; set; } = string.Empty;
+    public DateTime? DateTime { get; set; }
     public List<BillItem> Items { get; set; } = new();
     public decimal Subtotal { get; set; }
     public decimal DiscountAmount { get; set; }

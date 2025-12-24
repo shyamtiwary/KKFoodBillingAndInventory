@@ -1,6 +1,6 @@
 import { Bill } from '@/data/testData';
 import { Capacitor } from '@capacitor/core';
-import { ApiBillService, LocalBillService, IBillService } from './services/billService';
+import { ApiBillService, LocalBillService, WebBillService, IBillService } from './services/billService';
 
 const isNative = Capacitor.isNativePlatform();
 const service: IBillService = isNative ? new LocalBillService() : new ApiBillService();

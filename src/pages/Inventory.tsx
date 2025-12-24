@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { downloadFile } from "@/lib/utils/fileDownloader";
+import { formatAmount, formatQuantity } from "@/lib/utils";
 
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -313,14 +314,14 @@ const Inventory = () => {
                       <td className="py-3 px-4 font-medium">{product.name}</td>
                       <td className="py-3 px-4 text-muted-foreground">{product.category}</td>
                       <td className="py-3 px-4 text-right font-semibold">
-                        ₹{product.costPrice.toFixed(2)}
+                        ₹{formatAmount(product.costPrice)}
                       </td>
                       <td className="py-3 px-4 text-right font-semibold">
-                        ₹{product.sellPrice.toFixed(2)}
+                        ₹{formatAmount(product.sellPrice)}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <span className={product.stock <= product.lowStockThreshold ? 'text-warning font-semibold' : ''}>
-                          {product.stock}
+                          {formatQuantity(product.stock)}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-center">

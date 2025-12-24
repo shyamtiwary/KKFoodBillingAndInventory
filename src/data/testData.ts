@@ -23,6 +23,7 @@ export interface Bill {
   customerName: string;
   customerEmail: string;
   date: string;
+  datetime?: string;
   items: BillItem[];
   subtotal: number;
   discountAmount: number;
@@ -30,6 +31,8 @@ export interface Bill {
   total: number;
   status: 'paid' | 'pending' | 'overdue';
   createdBy?: string;
+  amountPaid?: number;
+  customerMobile?: string;
 }
 
 export const products: Product[] = [];

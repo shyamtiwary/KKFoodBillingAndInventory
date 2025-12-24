@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { customerManager, Customer } from "@/lib/customerManager";
-import { Search, UserPlus, History, IndianRupee, ArrowUpRight, ArrowDownRight, Wallet } from "lucide-react";
+import { Search, UserPlus, History, IndianRupee, ArrowUpRight, ArrowDownRight, Wallet, Trash2 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { toast } from "sonner";
 import {
@@ -17,6 +17,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { formatAmount } from "@/lib/utils";
 
 const Customers = () => {
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -25,6 +26,8 @@ const Customers = () => {
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [adjustmentAmount, setAdjustmentAmount] = useState("");
     const [adjustmentType, setAdjustmentType] = useState<"payment" | "charge">("payment");
+    const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         fetchCustomers();
@@ -75,6 +78,31 @@ const Customers = () => {
             fetchCustomers();
         } catch (error) {
             toast.error("Failed to update balance");
+        }
+    };
+
+    const handleDeleteCustomer = async () => {
+        if (!customerToDelete) return;
+
+        setIsDeleting(true);
+        try {
+            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:55219';
+            const response = await fetch(`${API_BASE_URL}/api/Customers/${customerToDelete.id}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                toast.success(`Customer ${customerToDelete.name} deleted successfully`);
+                fetchCustomers();
+            } else {
+                toast.error("Failed to delete customer");
+            }
+        } catch (error) {
+            console.error("Error deleting customer:", error);
+            toast.error("Failed to delete customer");
+        } finally {
+            setIsDeleting(false);
+            setCustomerToDelete(null);
         }
     };
 
@@ -160,8 +188,8 @@ const Customers = () => {
                                             <TableCell>{customer.email}</TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex flex-col items-end">
-                                                    <span className={`font-bold ${customer.balance > 0 ? 'text-red-600' : customer.balance < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                                                        ₹{Math.abs(customer.balance).toFixed(2)}
+                                                    <span className={`font-bold ${customer.balance > 0 ? 'text-red-600' : customer.balance < 0 ? 'text-orange-500' : 'text-muted-foreground'}`}>
+                                                        ₹{formatAmount(Math.abs(customer.balance))}
                                                     </span>
                                                     <span className="text-[10px] uppercase font-bold">
                                                         {customer.balance > 0 ? 'Pending' : customer.balance < 0 ? 'Advance' : 'Clear'}
@@ -169,58 +197,68 @@ const Customers = () => {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Dialog>
-                                                    <DialogTrigger asChild>
-                                                        <Button variant="outline" size="sm" onClick={() => setSelectedCustomer(customer)}>
-                                                            <IndianRupee className="h-4 w-4 mr-1" />
-                                                            Adjust Balance
-                                                        </Button>
-                                                    </DialogTrigger>
-                                                    <DialogContent>
-                                                        <DialogHeader>
-                                                            <DialogTitle>Adjust Balance for {customer.name}</DialogTitle>
-                                                            <DialogDescription>
-                                                                Current Balance: ₹{customer.balance.toFixed(2)}
-                                                            </DialogDescription>
-                                                        </DialogHeader>
-                                                        <div className="grid gap-4 py-4">
-                                                            <div className="grid gap-2">
-                                                                <Label>Adjustment Type</Label>
-                                                                <div className="flex gap-4">
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant={adjustmentType === "payment" ? "default" : "outline"}
-                                                                        onClick={() => setAdjustmentType("payment")}
-                                                                        className="flex-1"
-                                                                    >
-                                                                        Payment Received
-                                                                    </Button>
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant={adjustmentType === "charge" ? "default" : "outline"}
-                                                                        onClick={() => setAdjustmentType("charge")}
-                                                                        className="flex-1"
-                                                                    >
-                                                                        Add Charge
-                                                                    </Button>
+                                                <div className="flex gap-2 justify-end">
+                                                    <Dialog>
+                                                        <DialogTrigger asChild>
+                                                            <Button variant="outline" size="sm" onClick={() => setSelectedCustomer(customer)}>
+                                                                <IndianRupee className="h-4 w-4 mr-1" />
+                                                                Adjust Balance
+                                                            </Button>
+                                                        </DialogTrigger>
+                                                        <DialogContent>
+                                                            <DialogHeader>
+                                                                <DialogTitle>Adjust Balance for {customer.name}</DialogTitle>
+                                                                <DialogDescription>
+                                                                    Current Balance: ₹{formatAmount(customer.balance)}
+                                                                </DialogDescription>
+                                                            </DialogHeader>
+                                                            <div className="grid gap-4 py-4">
+                                                                <div className="grid gap-2">
+                                                                    <Label>Adjustment Type</Label>
+                                                                    <div className="flex gap-4">
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant={adjustmentType === "payment" ? "default" : "outline"}
+                                                                            onClick={() => setAdjustmentType("payment")}
+                                                                            className="flex-1"
+                                                                        >
+                                                                            Payment Received
+                                                                        </Button>
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant={adjustmentType === "charge" ? "default" : "outline"}
+                                                                            onClick={() => setAdjustmentType("charge")}
+                                                                            className="flex-1"
+                                                                        >
+                                                                            Add Charge
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="grid gap-2">
+                                                                    <Label htmlFor="amount">Amount (₹)</Label>
+                                                                    <Input
+                                                                        id="amount"
+                                                                        type="number"
+                                                                        placeholder="0.00"
+                                                                        value={adjustmentAmount}
+                                                                        onChange={(e) => setAdjustmentAmount(e.target.value)}
+                                                                    />
                                                                 </div>
                                                             </div>
-                                                            <div className="grid gap-2">
-                                                                <Label htmlFor="amount">Amount (₹)</Label>
-                                                                <Input
-                                                                    id="amount"
-                                                                    type="number"
-                                                                    placeholder="0.00"
-                                                                    value={adjustmentAmount}
-                                                                    onChange={(e) => setAdjustmentAmount(e.target.value)}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <DialogFooter>
-                                                            <Button onClick={handleAdjustment}>Save Changes</Button>
-                                                        </DialogFooter>
-                                                    </DialogContent>
-                                                </Dialog>
+                                                            <DialogFooter>
+                                                                <Button onClick={handleAdjustment}>Save Changes</Button>
+                                                            </DialogFooter>
+                                                        </DialogContent>
+                                                    </Dialog>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setCustomerToDelete(customer)}
+                                                        className="text-destructive hover:text-destructive"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -230,6 +268,26 @@ const Customers = () => {
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog open={!!customerToDelete} onOpenChange={(open) => !open && !isDeleting && setCustomerToDelete(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Customer Deletion</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete customer <strong>{customerToDelete?.name}</strong>?
+                            This action cannot be undone and will permanently remove all customer data.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCustomerToDelete(null)} disabled={isDeleting}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDeleteCustomer} disabled={isDeleting}>
+                            {isDeleting ? "Deleting..." : "Delete Customer"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

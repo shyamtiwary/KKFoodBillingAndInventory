@@ -73,6 +73,48 @@ export class ApiBillService implements IBillService {
     }
 }
 
+import { billStore } from '../storage/localStore';
+
+export class WebBillService implements IBillService {
+    async getAll(): Promise<Bill[]> {
+        const bills = await billStore.getItem<Bill[]>('bills');
+        return bills || [];
+    }
+
+    async add(bill: Bill): Promise<Bill | undefined> {
+        const bills = await this.getAll();
+        const updated = [bill, ...bills]; // Newest first
+        await billStore.setItem('bills', updated);
+        return bill;
+    }
+
+    async update(id: string, bill: Bill): Promise<Bill | undefined> {
+        const bills = await this.getAll();
+        const index = bills.findIndex(b => b.id === id);
+        if (index === -1) return undefined;
+
+        bills[index] = bill;
+        await billStore.setItem('bills', bills);
+        return bill;
+    }
+
+    async delete(id: string): Promise<boolean> {
+        const bills = await this.getAll();
+        const filtered = bills.filter(b => b.id !== id);
+        await billStore.setItem('bills', filtered);
+        return true;
+    }
+
+    async generateBillNumber(): Promise<string> {
+        const bills = await this.getAll();
+        const maxNum = bills.reduce((max, bill) => {
+            const num = parseInt(bill.billNumber.split('-')[1]);
+            return num > max ? num : max;
+        }, 0);
+        return `INV-${String(maxNum + 1).padStart(3, '0')}`;
+    }
+}
+
 import { databaseService } from '@/lib/db/database';
 
 export class LocalBillService implements IBillService {

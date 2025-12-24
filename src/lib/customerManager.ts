@@ -10,6 +10,8 @@ export interface Customer {
     balance: number;
 }
 
+import { customerStore } from './storage/localStore';
+
 class CustomerManager {
     private isNative = Capacitor.isNativePlatform();
 

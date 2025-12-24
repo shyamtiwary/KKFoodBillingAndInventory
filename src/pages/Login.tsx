@@ -78,7 +78,7 @@ const Login = () => {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">
-            {isRegister ? 'Create Account' : 'BillFlow Login'}
+            {isRegister ? 'Create Account' : 'KK Foods Login'}
           </CardTitle>
           <CardDescription>
             {isRegister
@@ -138,17 +138,7 @@ const Login = () => {
             </button>
           </div>
 
-          {!isRegister && (
-            <div className="mt-6 p-4 bg-muted rounded-md">
-              <p className="text-sm font-medium text-muted-foreground mb-2">Demo Credentials:</p>
-              <div className="space-y-1 text-xs text-muted-foreground">
-                <p>• Admin: admin</p>
-                <p>• Manager: manager</p>
-                <p>• Staff: staff</p>
-                <p className="mt-2">Password: <span className="font-mono">password</span></p>
-              </div>
-            </div>
-          )}
+
         </CardContent>
       </Card>
     </div>

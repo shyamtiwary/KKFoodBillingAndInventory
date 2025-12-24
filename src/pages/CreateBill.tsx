@@ -12,6 +12,12 @@ import { productManager } from "@/lib/productManager";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { customerManager, Customer } from "@/lib/customerManager";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn, formatAmount, formatQuantity } from "@/lib/utils";
+
+
 
 interface BillItem {
   productId: string;
@@ -33,13 +39,19 @@ const CreateBill = () => {
   const [paymentStatus, setPaymentStatus] = useState<'paid' | 'unpaid'>('paid');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingCustomer, setExistingCustomer] = useState<Customer | null>(null);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+  const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       billManager.initialize();
       productManager.initialize();
-      const allProducts = await productManager.getAll();
+      const [allProducts, customers] = await Promise.all([
+        productManager.getAll(),
+        customerManager.getAll()
+      ]);
       setProducts(allProducts);
+      setAllCustomers(customers);
     };
     fetchData();
   }, []);
@@ -78,6 +90,14 @@ const CreateBill = () => {
     const newItems = [...items];
 
     if (field === "quantity") {
+      const product = products.find((p) => p.id === newItems[index].productId);
+      const qty = value === "" ? 0 : parseFloat(value.toString());
+
+      if (product && qty > product.stock) {
+        toast.error(`Only ${product.stock} units available in stock`);
+        return;
+      }
+
       if (value === "" || /^\d*\.?\d*$/.test(value.toString())) {
         newItems[index] = { ...newItems[index], [field]: value };
       }
@@ -130,9 +150,10 @@ const CreateBill = () => {
         id: Date.now().toString(),
         billNumber: await billManager.generateBillNumber(),
         customerName: customerName || "Walk-in Customer",
-        customerEmail: customerEmail || "N/A",
+        customerEmail: customerEmail,
         customerMobile: customerMobile,
         date: new Date().toLocaleDateString('en-CA'),
+        datetime: new Date().toISOString(),
         items: validItems.map(item => {
           const product = products.find(p => p.id === item.productId);
           const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
@@ -161,7 +182,7 @@ const CreateBill = () => {
             id: Date.now().toString(),
             name: customerName || "Walk-in Customer",
             mobile: customerMobile,
-            email: customerEmail || "N/A",
+            email: customerEmail,
             balance: balanceChange
           });
         } else if (balanceChange !== 0) {
@@ -199,7 +220,7 @@ const CreateBill = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
       <div>
         <h1 className="text-3xl font-bold">Create New Bill</h1>
         <p className="text-muted-foreground mt-1">Generate a new invoice for your customer</p>
@@ -217,7 +238,62 @@ const CreateBill = () => {
                 </div>
                 <div>
                   <Label htmlFor="customerName">Customer Name</Label>
-                  <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="John Doe" />
+                  <Popover open={customerSearchOpen} onOpenChange={setCustomerSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={customerSearchOpen}
+                        className="w-full justify-between font-normal"
+                      >
+                        {customerName || "Select or type customer name..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] sm:w-[400px] p-0" align="start">
+                      <Command shouldFilter={false}>
+                        <CommandInput
+                          placeholder="Search customer..."
+                          value={customerName}
+                          onValueChange={(val) => {
+                            setCustomerName(val);
+                            setCustomerSearchOpen(true);
+                          }}
+                        />
+                        <CommandList>
+                          {customerName.length >= 3 && (
+                            <>
+                              <CommandEmpty>No customer found. Type to add new.</CommandEmpty>
+                              <CommandGroup>
+                                {allCustomers
+                                  .filter(c => c.name.toLowerCase().includes(customerName.toLowerCase()))
+                                  .map((customer) => (
+                                    <CommandItem
+                                      key={customer.id}
+                                      value={customer.name}
+                                      onSelect={() => {
+                                        setCustomerName(customer.name);
+                                        setCustomerMobile(customer.mobile);
+                                        setCustomerEmail(customer.email);
+                                        setCustomerSearchOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          customerName === customer.name ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {customer.name} ({customer.mobile})
+                                    </CommandItem>
+                                  ))}
+                              </CommandGroup>
+                            </>
+                          )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <Label htmlFor="customerEmail">Email (Optional)</Label>
@@ -252,8 +328,13 @@ const CreateBill = () => {
                         <SelectTrigger id={`product-trigger-${index}`}><SelectValue placeholder="Select product" /></SelectTrigger>
                         <SelectContent>
                           {products.map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
+                            <SelectItem
+                              key={product.id}
+                              value={product.id}
+                              disabled={product.stock <= 0}
+                            >
                               {product.name} (Stock: {product.stock}) - ₹{product.sellPrice.toFixed(2)}
+                              {product.stock <= 0 && " [Out of Stock]"}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -297,7 +378,7 @@ const CreateBill = () => {
                   </div>
                   <div className="border-t pt-2 flex justify-between">
                     <span className="font-semibold">Total</span>
-                    <span className="text-2xl font-bold text-primary">₹{calculateTotal().toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-primary">₹{formatAmount(calculateTotal())}</span>
                   </div>
                 </div>
 
@@ -313,7 +394,7 @@ const CreateBill = () => {
                     <div className="space-y-2">
                       <Label htmlFor="amountPaid">Amount Paid (₹)</Label>
                       <Input id="amountPaid" type="number" value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} placeholder="0.00" />
-                      <p className="text-xs text-muted-foreground">Remaining ₹{(calculateTotal() - (parseFloat(amountPaid) || 0)).toFixed(2)} will be added to balance.</p>
+                      <p className="text-xs text-muted-foreground">Remaining ₹{formatAmount(calculateTotal() - (parseFloat(amountPaid) || 0))} will be added to balance.</p>
                     </div>
                   )}
                 </div>

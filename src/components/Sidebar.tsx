@@ -65,7 +65,7 @@ export const SidebarContent = () => {
   return (
     <div className="flex flex-col h-full">
       <div className="p-6">
-        <h1 className="text-2xl font-bold text-primary">K K Foods</h1>
+        <h1 className="text-2xl font-bold text-primary">KK Foods</h1>
         <p className="text-sm text-muted-foreground mt-1">Inventory & Billing</p>
         {user && (
           <div className="mt-4 pt-4 border-t border-border">
