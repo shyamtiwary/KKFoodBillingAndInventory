@@ -123,7 +123,7 @@ const Inventory = () => {
       toast.success("Product added successfully");
     } catch (error) {
       console.error("Error adding product:", error);
-      toast.error("Failed to add product");
+      toast.error(`Failed to add product: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsAdding(false);
     }

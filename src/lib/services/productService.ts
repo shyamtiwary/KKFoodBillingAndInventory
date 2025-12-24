@@ -177,8 +177,6 @@ export class LocalProductService implements IProductService {
     }
 
     async generateId(): Promise<string> {
-        const result = await databaseService.query('SELECT MAX(CAST(id AS INTEGER)) as maxId FROM products');
-        const maxId = result[0]?.maxId || 0;
-        return String(maxId + 1);
+        return Date.now().toString();
     }
 }
