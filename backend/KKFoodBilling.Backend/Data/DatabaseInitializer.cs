@@ -195,6 +195,7 @@ public class DatabaseInitializer
             connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
 
             connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
+            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS id TEXT");
             connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT");
             connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS accesstype TEXT DEFAULT 'web'");
         }
@@ -212,6 +213,7 @@ public class DatabaseInitializer
             try { connection.Execute("ALTER TABLE Customers ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
 
             try { connection.Execute("ALTER TABLE Users ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN Id TEXT"); } catch { }
             try { connection.Execute("ALTER TABLE Users ADD COLUMN Password TEXT"); } catch { }
             try { connection.Execute("ALTER TABLE Users ADD COLUMN AccessType TEXT DEFAULT 'web'"); } catch { }
         }
