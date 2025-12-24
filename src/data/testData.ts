@@ -7,6 +7,7 @@ export interface Product {
   stock: number;
   sku: string;
   lowStockThreshold: number;
+  createdAt?: string;
 }
 
 export interface BillItem {
@@ -23,7 +24,7 @@ export interface Bill {
   customerName: string;
   customerEmail: string;
   date: string;
-  datetime?: string;
+  datetime: string;
   items: BillItem[];
   subtotal: number;
   discountAmount: number;

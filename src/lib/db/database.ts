@@ -44,7 +44,8 @@ export class DatabaseService {
           price REAL,
           costPrice REAL,
           stock INTEGER,
-          lowStockThreshold INTEGER
+          lowStockThreshold INTEGER,
+          createdAt TEXT DEFAULT CURRENT_TIMESTAMP
         );
 
         CREATE TABLE IF NOT EXISTS bills (
@@ -55,6 +56,8 @@ export class DatabaseService {
           customerEmail TEXT,
           total REAL,
           status TEXT,
+          createdBy TEXT,
+          datetime TEXT DEFAULT CURRENT_TIMESTAMP,
           data TEXT
         );
 
@@ -63,7 +66,10 @@ export class DatabaseService {
           name TEXT,
           role TEXT,
           password TEXT,
-          isApproved INTEGER
+          isApproved INTEGER,
+          isActive INTEGER DEFAULT 1,
+          accessType TEXT DEFAULT 'mobile',
+          createdAt TEXT DEFAULT CURRENT_TIMESTAMP
         );
 
         CREATE TABLE IF NOT EXISTS customers (
@@ -71,7 +77,9 @@ export class DatabaseService {
           name TEXT,
           mobile TEXT UNIQUE,
           email TEXT,
-          balance REAL
+          balance REAL,
+          createdBy TEXT,
+          createdAt TEXT DEFAULT CURRENT_TIMESTAMP
         );
       `;
 

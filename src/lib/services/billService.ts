@@ -14,9 +14,22 @@ export interface IBillService {
 export class ApiBillService implements IBillService {
     async getAll(): Promise<Bill[]> {
         try {
-            const response = await fetch(API_URL);
+            const auth = localStorage.getItem('kkfood_auth');
+            const user = auth ? JSON.parse(auth) : null;
+            const headers: Record<string, string> = {};
+            if (user) {
+                headers['X-User-Email'] = user.email;
+                headers['X-User-Role'] = user.role;
+            }
+
+            const response = await fetch(API_URL, { headers });
             if (response.ok) {
-                return await response.json();
+                const bills = await response.json();
+                // Map backend DateTime to frontend datetime
+                return bills.map((bill: any) => ({
+                    ...bill,
+                    datetime: bill.dateTime || bill.datetime
+                }));
             }
         } catch (error) {
             console.warn('API offline');
@@ -26,9 +39,17 @@ export class ApiBillService implements IBillService {
 
     async add(bill: Bill): Promise<Bill | undefined> {
         try {
+            const auth = localStorage.getItem('kkfood_auth');
+            const user = auth ? JSON.parse(auth) : null;
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (user) {
+                headers['X-User-Email'] = user.email;
+                headers['X-User-Role'] = user.role;
+            }
+
             const response = await fetch(API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify(bill),
             });
             return response.ok ? await response.json() : undefined;
@@ -40,9 +61,17 @@ export class ApiBillService implements IBillService {
 
     async update(id: string, bill: Bill): Promise<Bill | undefined> {
         try {
+            const auth = localStorage.getItem('kkfood_auth');
+            const user = auth ? JSON.parse(auth) : null;
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (user) {
+                headers['X-User-Email'] = user.email;
+                headers['X-User-Role'] = user.role;
+            }
+
             const response = await fetch(`${API_URL}/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify(bill),
             });
             return response.ok ? await response.json() : undefined;
@@ -54,7 +83,18 @@ export class ApiBillService implements IBillService {
 
     async delete(id: string): Promise<boolean> {
         try {
-            const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            const auth = localStorage.getItem('kkfood_auth');
+            const user = auth ? JSON.parse(auth) : null;
+            const headers: Record<string, string> = {};
+            if (user) {
+                headers['X-User-Email'] = user.email;
+                headers['X-User-Role'] = user.role;
+            }
+
+            const response = await fetch(`${API_URL}/${id}`, {
+                method: 'DELETE',
+                headers
+            });
             return response.ok;
         } catch (error) {
             console.warn('API offline');
@@ -119,19 +159,32 @@ import { databaseService } from '@/lib/db/database';
 
 export class LocalBillService implements IBillService {
     async getAll(): Promise<Bill[]> {
-        const result = await databaseService.query('SELECT * FROM bills ORDER BY date DESC');
+        const auth = localStorage.getItem('kkfood_auth');
+        const user = auth ? JSON.parse(auth) : null;
+
+        let query = 'SELECT * FROM bills';
+        let params: any[] = [];
+
+        if (user && user.role !== 'admin') {
+            query += ' WHERE createdBy = ?';
+            params.push(user.email);
+        }
+
+        query += ' ORDER BY date DESC';
+
+        const result = await databaseService.query(query, params);
         return result.map(row => {
             // Parse the full bill object from the JSON column
             const billData = JSON.parse(row.data);
             // Ensure status matches the column (source of truth for filtering)
-            return { ...billData, status: row.status };
+            return { ...billData, status: row.status, datetime: row.datetime };
         });
     }
 
     async add(bill: Bill): Promise<Bill | undefined> {
         const query = `
-            INSERT INTO bills (id, billNumber, date, customerName, customerEmail, total, status, data)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO bills (id, billNumber, date, customerName, customerEmail, total, status, createdBy, datetime, data)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         await databaseService.run(query, [
             bill.id,
@@ -141,6 +194,8 @@ export class LocalBillService implements IBillService {
             bill.customerEmail,
             bill.total,
             bill.status,
+            bill.createdBy || 'admin',
+            bill.datetime || new Date().toISOString(),
             JSON.stringify(bill)
         ]);
         return bill;
@@ -149,7 +204,7 @@ export class LocalBillService implements IBillService {
     async update(id: string, bill: Bill): Promise<Bill | undefined> {
         const query = `
             UPDATE bills 
-            SET date = ?, customerName = ?, customerEmail = ?, total = ?, status = ?, data = ?
+            SET date = ?, customerName = ?, customerEmail = ?, total = ?, status = ?, createdBy = ?, data = ?
             WHERE id = ?
         `;
         await databaseService.run(query, [
@@ -158,6 +213,7 @@ export class LocalBillService implements IBillService {
             bill.customerEmail,
             bill.total,
             bill.status,
+            bill.createdBy || 'admin',
             JSON.stringify(bill),
             id
         ]);

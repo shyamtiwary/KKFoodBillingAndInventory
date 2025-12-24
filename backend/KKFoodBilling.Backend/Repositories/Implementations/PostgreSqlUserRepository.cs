@@ -32,8 +32,8 @@ public class PostgreSqlUserRepository : IUserRepository
     {
         using var connection = _connectionFactory.CreateConnection();
         await connection.ExecuteAsync(@"
-            INSERT INTO users (email, role, name, password, isapproved)
-            VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
+            INSERT INTO users (id, email, role, name, password, isapproved, isactive, accesstype, createdat)
+            VALUES (@Id, @Email, @Role, @Name, @Password, @IsApproved, @IsActive, @AccessType, @CreatedAt)",
             user);
     }
 
@@ -42,7 +42,7 @@ public class PostgreSqlUserRepository : IUserRepository
         using var connection = _connectionFactory.CreateConnection();
         await connection.ExecuteAsync(@"
             UPDATE users 
-            SET role = @Role, name = @Name, password = @Password, isapproved = @IsApproved
+            SET role = @Role, name = @Name, password = @Password, isapproved = @IsApproved, isactive = @IsActive, accesstype = @AccessType, createdat = @CreatedAt
             WHERE email = @Email",
             user);
     }

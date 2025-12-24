@@ -163,6 +163,7 @@ const Customers = () => {
                                     <TableHead>Name</TableHead>
                                     <TableHead>Mobile</TableHead>
                                     <TableHead>Email</TableHead>
+                                    <TableHead>Created At</TableHead>
                                     <TableHead className="text-right">Balance</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
@@ -186,6 +187,14 @@ const Customers = () => {
                                             <TableCell className="font-medium">{customer.name}</TableCell>
                                             <TableCell>{customer.mobile}</TableCell>
                                             <TableCell>{customer.email}</TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">
+                                                {customer.createdAt ? (
+                                                    <>
+                                                        <div>{new Date(customer.createdAt).toLocaleDateString()}</div>
+                                                        <div className="text-xs">{new Date(customer.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                                    </>
+                                                ) : '-'}
+                                            </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex flex-col items-end">
                                                     <span className={`font-bold ${customer.balance > 0 ? 'text-red-600' : customer.balance < 0 ? 'text-orange-500' : 'text-muted-foreground'}`}>

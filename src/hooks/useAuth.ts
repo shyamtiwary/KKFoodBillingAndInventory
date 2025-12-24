@@ -10,9 +10,12 @@ export interface User {
   role: UserRole;
   name: string;
   isApproved: boolean;
+  isActive: boolean;
+  accessType: string;
+  createdAt?: string;
 }
 
-const AUTH_STORAGE_KEY = 'billflow_auth';
+const AUTH_STORAGE_KEY = 'kkfood_auth';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -50,8 +53,8 @@ export const useAuth = () => {
         if (Capacitor.isNativePlatform()) {
           try {
             await databaseService.run(
-              `INSERT OR REPLACE INTO users (email, name, role, password, isApproved) VALUES (?, ?, ?, ?, ?)`,
-              [userData.email, userData.name, userData.role, password, userData.isApproved ? 1 : 0]
+              `INSERT OR REPLACE INTO users (email, name, role, password, isApproved, isActive, accessType) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [userData.email, userData.name, userData.role, password, userData.isApproved ? 1 : 0, userData.isActive ? 1 : 0, userData.accessType || 'web']
             );
           } catch (dbError) {
             console.error("Failed to sync user to SQLite:", dbError);
@@ -83,12 +86,17 @@ export const useAuth = () => {
             if (localUser.isApproved === 0) {
               return { success: false, message: 'Account pending approval' };
             }
+            if (localUser.isActive === 0) {
+              return { success: false, message: 'Account is disabled. Please contact admin.' };
+            }
 
             const userData: User = {
               email: localUser.email,
               name: localUser.name,
               role: localUser.role as UserRole,
-              isApproved: localUser.isApproved === 1
+              isApproved: localUser.isApproved === 1,
+              isActive: localUser.isActive === 1,
+              accessType: localUser.accessType || 'mobile'
             };
             setUser(userData);
             localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
@@ -99,24 +107,7 @@ export const useAuth = () => {
         }
       }
 
-      // Final fallback for demo/dev
-      if (password === 'password') {
-        let role: UserRole = 'staff';
-        if (email.toLowerCase() === 'admin') role = 'admin';
-        if (email.toLowerCase() === 'manager') role = 'manager';
 
-        if (['admin', 'manager', 'staff'].includes(email.toLowerCase())) {
-          const mockUser: User = {
-            email,
-            name: email.charAt(0).toUpperCase() + email.slice(1),
-            role,
-            isApproved: true
-          };
-          setUser(mockUser);
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
-          return { success: true };
-        }
-      }
 
       return { success: false, message: `Server connection failed at ${SERVICE_URLS.AUTH}/login` };
     }
@@ -156,5 +147,13 @@ export const useAuth = () => {
     localStorage.removeItem(AUTH_STORAGE_KEY);
   };
 
-  return { user, isLoading, login, register, logout };
+  const getAuthHeaders = () => {
+    if (!user) return {};
+    return {
+      'X-User-Email': user.email,
+      'X-User-Role': user.role,
+    };
+  };
+
+  return { user, isLoading, login, register, logout, getAuthHeaders };
 };

@@ -8,6 +8,7 @@ export interface Customer {
     mobile: string;
     email: string;
     balance: number;
+    createdAt?: string;
 }
 
 import { customerStore } from './storage/localStore';
@@ -17,9 +18,31 @@ class CustomerManager {
 
     async getAll(): Promise<Customer[]> {
         if (this.isNative) {
-            return await databaseService.query('SELECT * FROM customers');
+            const auth = localStorage.getItem('kkfood_auth');
+            const user = auth ? JSON.parse(auth) : null;
+
+            let query = 'SELECT * FROM customers';
+            let params: any[] = [];
+
+            if (user && user.role !== 'admin') {
+                query += ' WHERE createdBy = ?';
+                params.push(user.email);
+            }
+
+            return (await databaseService.query(query, params)).map(row => ({
+                ...row,
+                createdAt: row.createdAt
+            }));
         } else {
-            const response = await fetch(`${SERVICE_URLS.AUTH.replace('Auth', 'Customers')}`);
+            const auth = localStorage.getItem('kkfood_auth');
+            const user = auth ? JSON.parse(auth) : null;
+            const headers: Record<string, string> = {};
+            if (user) {
+                headers['X-User-Email'] = user.email;
+                headers['X-User-Role'] = user.role;
+            }
+
+            const response = await fetch(`${SERVICE_URLS.AUTH.replace('Auth', 'Customers')}`, { headers });
             if (response.ok) return await response.json();
             return [];
         }
@@ -30,7 +53,15 @@ class CustomerManager {
             const results = await databaseService.query('SELECT * FROM customers WHERE mobile = ?', [mobile]);
             return results.length > 0 ? results[0] : null;
         } else {
-            const response = await fetch(`${SERVICE_URLS.AUTH.replace('Auth', 'Customers')}/mobile/${mobile}`);
+            const auth = localStorage.getItem('kkfood_auth');
+            const user = auth ? JSON.parse(auth) : null;
+            const headers: Record<string, string> = {};
+            if (user) {
+                headers['X-User-Email'] = user.email;
+                headers['X-User-Role'] = user.role;
+            }
+
+            const response = await fetch(`${SERVICE_URLS.AUTH.replace('Auth', 'Customers')}/mobile/${mobile}`, { headers });
             if (response.ok) return await response.json();
             return null;
         }
@@ -38,15 +69,26 @@ class CustomerManager {
 
     async add(customer: Customer): Promise<void> {
         if (this.isNative) {
+            const auth = localStorage.getItem('kkfood_auth');
+            const user = auth ? JSON.parse(auth) : null;
+
             await databaseService.run(
-                'INSERT INTO customers (id, name, mobile, email, balance) VALUES (?, ?, ?, ?, ?)',
-                [customer.id, customer.name, customer.mobile, customer.email, customer.balance]
+                'INSERT INTO customers (id, name, mobile, email, balance, createdBy, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [customer.id, customer.name, customer.mobile, customer.email, customer.balance, user?.email || 'admin', customer.createdAt || new Date().toISOString()]
             );
         } else {
+            const auth = localStorage.getItem('kkfood_auth');
+            const user = auth ? JSON.parse(auth) : null;
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (user) {
+                headers['X-User-Email'] = user.email;
+                headers['X-User-Role'] = user.role;
+            }
+
             await fetch(`${SERVICE_URLS.AUTH.replace('Auth', 'Customers')}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(customer),
+                headers,
+                body: JSON.stringify({ ...customer, createdBy: user?.email || 'admin' }),
             });
         }
     }
@@ -57,14 +99,22 @@ class CustomerManager {
             if (existing.length > 0) {
                 const updated = { ...existing[0], ...customer };
                 await databaseService.run(
-                    'UPDATE customers SET name = ?, mobile = ?, email = ?, balance = ? WHERE id = ?',
-                    [updated.name, updated.mobile, updated.email, updated.balance, id]
+                    'UPDATE customers SET name = ?, mobile = ?, email = ?, balance = ?, createdBy = ? WHERE id = ?',
+                    [updated.name, updated.mobile, updated.email, updated.balance, updated.createdBy || 'admin', id]
                 );
             }
         } else {
+            const auth = localStorage.getItem('billflow_auth');
+            const user = auth ? JSON.parse(auth) : null;
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (user) {
+                headers['X-User-Email'] = user.email;
+                headers['X-User-Role'] = user.role;
+            }
+
             await fetch(`${SERVICE_URLS.AUTH.replace('Auth', 'Customers')}/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ id, ...customer }),
             });
         }

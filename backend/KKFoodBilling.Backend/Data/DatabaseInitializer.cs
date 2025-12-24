@@ -45,7 +45,8 @@ public class DatabaseInitializer
                     costprice NUMERIC(10,2),
                     sellprice NUMERIC(10,2),
                     stock NUMERIC(10,2),
-                    lowstockthreshold INTEGER
+                    lowstockthreshold INTEGER,
+                    createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 )");
 
             connection.Execute(@"
@@ -63,7 +64,8 @@ public class DatabaseInitializer
                     total NUMERIC(10,2),
                     amountpaid NUMERIC(10,2),
                     status TEXT,
-                    createdby TEXT
+                    createdby TEXT,
+                    datetime TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 )");
 
             connection.Execute(@"
@@ -79,11 +81,15 @@ public class DatabaseInitializer
 
             connection.Execute(@"
                 CREATE TABLE IF NOT EXISTS users (
+                    id TEXT,
                     email TEXT PRIMARY KEY,
                     role TEXT,
                     name TEXT,
                     password TEXT,
-                    isapproved BOOLEAN
+                    isapproved BOOLEAN,
+                    isactive BOOLEAN DEFAULT TRUE,
+                    accesstype TEXT DEFAULT 'web',
+                    createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 )");
 
             connection.Execute(@"
@@ -92,7 +98,9 @@ public class DatabaseInitializer
                     name TEXT,
                     mobile TEXT UNIQUE,
                     email TEXT,
-                    balance NUMERIC(10,2)
+                    balance NUMERIC(10,2),
+                    createdby TEXT DEFAULT 'admin',
+                    createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 )");
         }
         else
@@ -107,7 +115,8 @@ public class DatabaseInitializer
                     CostPrice REAL,
                     SellPrice REAL,
                     Stock REAL,
-                    LowStockThreshold INTEGER
+                    LowStockThreshold INTEGER,
+                    CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
                 )");
 
             connection.Execute(@"
@@ -125,7 +134,8 @@ public class DatabaseInitializer
                     Total REAL,
                     AmountPaid REAL,
                     Status TEXT,
-                    CreatedBy TEXT
+                    CreatedBy TEXT,
+                    DateTime TEXT DEFAULT CURRENT_TIMESTAMP
                 )");
 
             connection.Execute(@"
@@ -141,11 +151,15 @@ public class DatabaseInitializer
 
             connection.Execute(@"
                 CREATE TABLE IF NOT EXISTS Users (
+                    Id TEXT,
                     Email TEXT PRIMARY KEY,
                     Role TEXT,
                     Name TEXT,
                     Password TEXT,
-                    IsApproved INTEGER
+                    IsApproved INTEGER,
+                    IsActive INTEGER DEFAULT 1,
+                    AccessType TEXT DEFAULT 'web',
+                    CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
                 )");
 
             connection.Execute(@"
@@ -154,7 +168,9 @@ public class DatabaseInitializer
                     Name TEXT,
                     Mobile TEXT UNIQUE,
                     Email TEXT,
-                    Balance REAL
+                    Balance REAL,
+                    CreatedBy TEXT DEFAULT 'admin',
+                    CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
                 )");
         }
     }
@@ -165,7 +181,7 @@ public class DatabaseInitializer
         var isPostgreSQL = provider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase);
 
         // Check if products empty
-        var productCount = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM products");
+        var productCount = connection.ExecuteScalar<int>($"SELECT COUNT(*) FROM {(isPostgreSQL ? "products" : "Products")}");
         if (productCount == 0)
         {
             var productsPath = Path.Combine(_env.ContentRootPath, "Data", "products.json");
@@ -177,9 +193,9 @@ public class DatabaseInitializer
                 {
                     foreach (var p in products)
                     {
-                        connection.Execute(@"
-                            INSERT INTO products (id, name, sku, category, costprice, sellprice, stock, lowstockthreshold)
-                            VALUES (@Id, @Name, @Sku, @Category, @CostPrice, @SellPrice, @Stock, @LowStockThreshold)",
+                        connection.Execute($@"
+                            INSERT INTO {(isPostgreSQL ? "products" : "Products")} ({(isPostgreSQL ? "id, name, sku, category, costprice, sellprice, stock, lowstockthreshold, createdat" : "Id, Name, Sku, Category, CostPrice, SellPrice, Stock, LowStockThreshold, CreatedAt")})
+                            VALUES (@Id, @Name, @Sku, @Category, @CostPrice, @SellPrice, @Stock, @LowStockThreshold, @CreatedAt)",
                             p);
                     }
                 }
@@ -187,7 +203,7 @@ public class DatabaseInitializer
         }
         
         // Check bills
-        var billCount = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM bills");
+        var billCount = connection.ExecuteScalar<int>($"SELECT COUNT(*) FROM {(isPostgreSQL ? "bills" : "Bills")}");
         if (billCount == 0)
         {
             var billsPath = Path.Combine(_env.ContentRootPath, "Data", "bills.json");
@@ -200,15 +216,15 @@ public class DatabaseInitializer
                     foreach (var b in bills)
                     {
                         // Insert Bill
-                        connection.Execute(@"
-                            INSERT INTO bills (id, billnumber, customername, customeremail, customermobile, date, subtotal, discountamount, discountpercentage, taxamount, total, amountpaid, status, createdby)
-                            VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy)",
+                        connection.Execute($@"
+                            INSERT INTO {(isPostgreSQL ? "bills" : "Bills")} ({(isPostgreSQL ? "id, billnumber, customername, customeremail, customermobile, date, datetime, subtotal, discountamount, discountpercentage, taxamount, total, amountpaid, status, createdby" : "Id, BillNumber, CustomerName, CustomerEmail, CustomerMobile, Date, DateTime, Subtotal, DiscountAmount, DiscountPercentage, TaxAmount, Total, AmountPaid, Status, CreatedBy")})
+                            VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @DateTime, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy)",
                             b);
 
                         foreach (var item in b.Items)
                         {
-                            connection.Execute(@"
-                                INSERT INTO billitems (billid, productid, productname, quantity, price, total)
+                            connection.Execute($@"
+                                INSERT INTO {(isPostgreSQL ? "billitems" : "BillItems")} ({(isPostgreSQL ? "billid, productid, productname, quantity, price, total" : "BillId, ProductId, ProductName, Quantity, Price, Total")})
                                 VALUES (@BillId, @ProductId, @ProductName, @Quantity, @Price, @Total)",
                                 new { BillId = b.Id, item.ProductId, item.ProductName, item.Quantity, item.Price, item.Total });
                         }
@@ -218,7 +234,7 @@ public class DatabaseInitializer
         }
 
         // Check users
-        var users = connection.Query<User>("SELECT * FROM users").ToList();
+        var users = connection.Query<User>($"SELECT * FROM {(isPostgreSQL ? "users" : "Users")}").ToList();
         Console.WriteLine($"[DatabaseInitializer] Current user count: {users.Count}");
         
         // Ensure default admin exists
@@ -226,15 +242,15 @@ public class DatabaseInitializer
         if (adminUser == null)
         {
             Console.WriteLine("[DatabaseInitializer] Admin user missing. Seeding admin...");
-            connection.Execute(@"
-                INSERT INTO users (email, role, name, password, isapproved)
-                VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
-                new { Email = "admin", Role = "admin", Name = "Admin User", Password = "password", IsApproved = true });
+            connection.Execute($@"
+                INSERT INTO {(isPostgreSQL ? "users" : "Users")} ({(isPostgreSQL ? "id, email, role, name, password, isapproved, isactive, accesstype, createdat" : "Id, Email, Role, Name, Password, IsApproved, IsActive, AccessType, CreatedAt")})
+                VALUES (@Id, @Email, @Role, @Name, @Password, @IsApproved, @IsActive, @AccessType, @CreatedAt)",
+                new { Id = Guid.NewGuid().ToString(), Email = "admin", Role = "admin", Name = "Admin User", Password = "admin@123#", IsApproved = true, IsActive = true, AccessType = "web", CreatedAt = DateTime.UtcNow });
         }
         else if (adminUser.Password == "password" || string.IsNullOrEmpty(adminUser.Password))
         {
             // Ensure default admin has 'password' if it was somehow corrupted or empty
-            connection.Execute("UPDATE users SET password = 'password', isapproved = true WHERE email = 'admin'");
+            connection.Execute($"UPDATE {(isPostgreSQL ? "users" : "Users")} SET {(isPostgreSQL ? "password" : "Password")} = 'admin@123#', {(isPostgreSQL ? "isapproved" : "IsApproved")} = {(isPostgreSQL ? "true" : "1")}, {(isPostgreSQL ? "isactive" : "IsActive")} = {(isPostgreSQL ? "true" : "1")}, {(isPostgreSQL ? "accesstype" : "AccessType")} = 'web' WHERE {(isPostgreSQL ? "email" : "Email")} = 'admin'");
         }
 
         if (users.Count <= 1) // Only seed others if it's a fresh DB or only admin exists
@@ -243,18 +259,18 @@ public class DatabaseInitializer
             
             if (!users.Any(u => u.Email.ToLower() == "manager"))
             {
-                connection.Execute(@"
-                    INSERT INTO users (email, role, name, password, isapproved)
-                    VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
-                    new { Email = "manager", Role = "manager", Name = "Manager User", Password = "password", IsApproved = true });
+                connection.Execute($@"
+                    INSERT INTO {(isPostgreSQL ? "users" : "Users")} ({(isPostgreSQL ? "id, email, role, name, password, isapproved, isactive, accesstype, createdat" : "Id, Email, Role, Name, Password, IsApproved, IsActive, AccessType, CreatedAt")})
+                    VALUES (@Id, @Email, @Role, @Name, @Password, @IsApproved, @IsActive, @AccessType, @CreatedAt)",
+                    new { Id = Guid.NewGuid().ToString(), Email = "manager", Role = "manager", Name = "Manager User", Password = "password", IsApproved = true, IsActive = true, AccessType = "web", CreatedAt = DateTime.UtcNow });
             }
 
             if (!users.Any(u => u.Email.ToLower() == "staff"))
             {
-                connection.Execute(@"
-                    INSERT INTO users (email, role, name, password, isapproved)
-                    VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
-                    new { Email = "staff", Role = "staff", Name = "Staff User", Password = "password", IsApproved = true });
+                connection.Execute($@"
+                    INSERT INTO {(isPostgreSQL ? "users" : "Users")} ({(isPostgreSQL ? "id, email, role, name, password, isapproved, isactive, accesstype, createdat" : "Id, Email, Role, Name, Password, IsApproved, IsActive, AccessType, CreatedAt")})
+                    VALUES (@Id, @Email, @Role, @Name, @Password, @IsApproved, @IsActive, @AccessType, @CreatedAt)",
+                    new { Id = Guid.NewGuid().ToString(), Email = "staff", Role = "staff", Name = "Staff User", Password = "password", IsApproved = true, IsActive = true, AccessType = "web", CreatedAt = DateTime.UtcNow });
             }
             
             Console.WriteLine("[DatabaseInitializer] Default users checked/seeded successfully.");

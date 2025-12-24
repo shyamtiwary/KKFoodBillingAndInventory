@@ -28,25 +28,30 @@ public class PostgreSqlCustomerRepository : ICustomerRepository
             "SELECT * FROM customers WHERE mobile = @Mobile", new { Mobile = mobile });
     }
 
-    public async Task<IEnumerable<Customer>> GetAllAsync()
+    public async Task<IEnumerable<Customer>> GetAllAsync(string? userId = null)
     {
         using var connection = _connectionFactory.CreateConnection();
-        return await connection.QueryAsync<Customer>("SELECT * FROM customers");
+        string sql = "SELECT * FROM customers";
+        if (!string.IsNullOrEmpty(userId))
+        {
+            sql += " WHERE createdby = @UserId";
+        }
+        return await connection.QueryAsync<Customer>(sql, new { UserId = userId });
     }
 
     public async Task AddAsync(Customer customer)
     {
         using var connection = _connectionFactory.CreateConnection();
         await connection.ExecuteAsync(
-            @"INSERT INTO customers (id, name, mobile, email, balance) 
-              VALUES (@Id, @Name, @Mobile, @Email, @Balance)", customer);
+            @"INSERT INTO customers (id, name, mobile, email, balance, createdby, createdat) 
+              VALUES (@Id, @Name, @Mobile, @Email, @Balance, @CreatedBy, @CreatedAt)", customer);
     }
 
     public async Task UpdateAsync(Customer customer)
     {
         using var connection = _connectionFactory.CreateConnection();
         await connection.ExecuteAsync(
-            @"UPDATE customers SET name = @Name, mobile = @Mobile, email = @Email, balance = @Balance 
+            @"UPDATE customers SET name = @Name, mobile = @Mobile, email = @Email, balance = @Balance, createdby = @CreatedBy, createdat = @CreatedAt 
               WHERE id = @Id", customer);
     }
 

@@ -3,11 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { dataManager } from "@/lib/dataManager";
-import { Download, Upload, User, Check, X, Trash } from "lucide-react";
+import { userManager } from "@/lib/userManager";
+import { Download, Upload, User, Check, X, Trash, Shield, ShieldOff, Smartphone, Monitor, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { SERVICE_URLS } from "@/config/apiConfig";
+import { Capacitor } from "@capacitor/core";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -26,21 +28,22 @@ const Settings = () => {
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [users, setUsers] = useState<any[]>([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     useEffect(() => {
         if (currentUser?.role === 'admin') {
             loadUsers();
+            if (Capacitor.isNativePlatform()) {
+                handleSyncUsers();
+            }
         }
     }, [currentUser]);
 
     const loadUsers = async () => {
         setIsLoadingUsers(true);
         try {
-            const response = await fetch(`${SERVICE_URLS.AUTH.replace('Auth', 'Users')}`);
-            if (response.ok) {
-                const data = await response.json();
-                setUsers(data);
-            }
+            const data = await userManager.getAll();
+            setUsers(data);
         } catch (error) {
             console.error("Error loading users:", error);
         } finally {
@@ -48,14 +51,27 @@ const Settings = () => {
         }
     };
 
+    const handleSyncUsers = async () => {
+        setIsSyncing(true);
+        try {
+            await userManager.syncUsers();
+            await loadUsers();
+            toast.success("Users synced with server");
+        } catch (error) {
+            toast.error("Failed to sync users");
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     const handleApprove = async (email: string) => {
         try {
-            const response = await fetch(`${SERVICE_URLS.AUTH.replace('Auth', 'Users')}/approve/${email}`, {
-                method: 'POST'
-            });
-            if (response.ok) {
+            const success = await userManager.approve(email);
+            if (success) {
                 toast.success("User approved");
                 loadUsers();
+            } else {
+                toast.error("Failed to approve user");
             }
         } catch (error) {
             toast.error("Failed to approve user");
@@ -64,38 +80,61 @@ const Settings = () => {
 
     const handleDisapprove = async (email: string) => {
         try {
-            const response = await fetch(`${SERVICE_URLS.AUTH.replace('Auth', 'Users')}/disapprove/${email}`, {
-                method: 'POST'
-            });
-            if (response.ok) {
+            const success = await userManager.disapprove(email);
+            if (success) {
                 toast.success("User disapproved");
                 loadUsers();
             } else {
-                const err = await response.text();
-                toast.error(err || "Failed to disapprove user");
+                toast.error("Failed to disapprove user");
             }
         } catch (error) {
             toast.error("Failed to disapprove user");
         }
     };
 
+    const handleEnable = async (email: string) => {
+        try {
+            const success = await userManager.enable(email);
+            if (success) {
+                toast.success("User enabled");
+                loadUsers();
+            } else {
+                toast.error("Failed to enable user");
+            }
+        } catch (error) {
+            toast.error("Failed to enable user");
+        }
+    };
+
+    const handleDisable = async (email: string) => {
+        try {
+            const success = await userManager.disable(email);
+            if (success) {
+                toast.success("User disabled");
+                loadUsers();
+            } else {
+                toast.error("Failed to disable user");
+            }
+        } catch (error) {
+            toast.error("Failed to disable user");
+        }
+    };
+
     const handleDeleteUser = async (email: string) => {
         if (!confirm(`Are you sure you want to delete user ${email}?`)) return;
         try {
-            const response = await fetch(`${SERVICE_URLS.AUTH.replace('Auth', 'Users')}/${email}`, {
-                method: 'DELETE'
-            });
-            if (response.ok) {
+            const success = await userManager.delete(email);
+            if (success) {
                 toast.success("User deleted");
                 loadUsers();
             } else {
-                const err = await response.text();
-                toast.error(err || "Failed to delete user");
+                toast.error("Failed to delete user");
             }
         } catch (error) {
             toast.error("Failed to delete user");
         }
     };
+
 
     const handleBackup = async () => {
         try {
@@ -153,13 +192,29 @@ const Settings = () => {
             {currentUser?.role === 'admin' && (
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <User className="h-5 w-5" />
-                            User Management
-                        </CardTitle>
-                        <CardDescription>
-                            Approve or manage user accounts.
-                        </CardDescription>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    <User className="h-5 w-5" />
+                                    User Management
+                                </CardTitle>
+                                <CardDescription>
+                                    Approve or manage user accounts.
+                                </CardDescription>
+                            </div>
+                            {Capacitor.isNativePlatform() && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleSyncUsers}
+                                    disabled={isSyncing}
+                                    className="flex items-center gap-2"
+                                >
+                                    <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                                    {isSyncing ? 'Syncing...' : 'Sync Now'}
+                                </Button>
+                            )}
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="overflow-x-auto">
@@ -169,6 +224,8 @@ const Settings = () => {
                                         <th className="text-left py-2">Name</th>
                                         <th className="text-left py-2">Email</th>
                                         <th className="text-left py-2">Role</th>
+                                        <th className="text-left py-2">Registered At</th>
+                                        <th className="text-left py-2">Access</th>
                                         <th className="text-center py-2">Status</th>
                                         <th className="text-right py-2">Actions</th>
                                     </tr>
@@ -179,10 +236,29 @@ const Settings = () => {
                                             <td className="py-3">{u.name}</td>
                                             <td className="py-3">{u.email}</td>
                                             <td className="py-3 capitalize">{u.role}</td>
+                                            <td className="py-3 text-xs text-muted-foreground">
+                                                {u.createdAt ? (
+                                                    <>
+                                                        <div>{new Date(u.createdAt).toLocaleDateString()}</div>
+                                                        <div>{new Date(u.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                                    </>
+                                                ) : '-'}
+                                            </td>
+                                            <td className="py-3">
+                                                <div className="flex items-center gap-1 text-muted-foreground">
+                                                    {u.accessType === 'mobile' ? <Smartphone className="h-3 w-3" /> : <Monitor className="h-3 w-3" />}
+                                                    <span className="text-[10px] capitalize">{u.accessType || 'web'}</span>
+                                                </div>
+                                            </td>
                                             <td className="py-3 text-center">
-                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${u.isApproved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                    {u.isApproved ? 'Approved' : 'Pending'}
-                                                </span>
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${u.isApproved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                        {u.isApproved ? 'Approved' : 'Pending'}
+                                                    </span>
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${u.isActive ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
+                                                        {u.isActive ? 'Active' : 'Disabled'}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td className="py-3 text-right">
                                                 <div className="flex justify-end gap-2">
@@ -193,6 +269,15 @@ const Settings = () => {
                                                     ) : (
                                                         <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={() => handleApprove(u.email)} title="Approve">
                                                             <Check className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                    {u.isActive ? (
+                                                        <Button size="sm" variant="outline" onClick={() => handleDisable(u.email)} title="Disable User" disabled={u.email === 'admin'}>
+                                                            <ShieldOff className="h-4 w-4" />
+                                                        </Button>
+                                                    ) : (
+                                                        <Button size="sm" variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleEnable(u.email)} title="Enable User">
+                                                            <Shield className="h-4 w-4" />
                                                         </Button>
                                                     )}
                                                     <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDeleteUser(u.email)} title="Delete" disabled={u.email === 'admin'}>

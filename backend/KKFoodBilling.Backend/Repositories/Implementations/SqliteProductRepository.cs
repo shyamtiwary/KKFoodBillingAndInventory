@@ -31,8 +31,8 @@ public class SqliteProductRepository : IProductRepository
     {
         using var connection = _connectionFactory.CreateConnection();
         const string sql = @"
-            INSERT INTO Products (Id, Name, Sku, Category, CostPrice, SellPrice, Stock, LowStockThreshold) 
-            VALUES (@Id, @Name, @Sku, @Category, @CostPrice, @SellPrice, @Stock, @LowStockThreshold)";
+            INSERT INTO Products (Id, Name, Sku, Category, CostPrice, SellPrice, Stock, LowStockThreshold, CreatedAt) 
+            VALUES (@Id, @Name, @Sku, @Category, @CostPrice, @SellPrice, @Stock, @LowStockThreshold, @CreatedAt)";
 
         await connection.ExecuteAsync(sql, product);
         return product;
@@ -43,7 +43,7 @@ public class SqliteProductRepository : IProductRepository
         using var connection = _connectionFactory.CreateConnection();
         const string sql = @"
             UPDATE Products 
-            SET Name = @Name, Sku = @Sku, Category = @Category, CostPrice = @CostPrice, SellPrice = @SellPrice, Stock = @Stock, LowStockThreshold = @LowStockThreshold
+            SET Name = @Name, Sku = @Sku, Category = @Category, CostPrice = @CostPrice, SellPrice = @SellPrice, Stock = @Stock, LowStockThreshold = @LowStockThreshold, CreatedAt = @CreatedAt
             WHERE Id = @Id";
 
         var rows = await connection.ExecuteAsync(sql, product);

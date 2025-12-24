@@ -15,10 +15,17 @@ public class SqliteBillRepository : IBillRepository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<IEnumerable<Bill>> GetAllAsync()
+    public async Task<IEnumerable<Bill>> GetAllAsync(string? userId = null)
     {
         using var connection = _connectionFactory.CreateConnection();
-        var bills = await connection.QueryAsync<Bill>("SELECT * FROM Bills ORDER BY Date DESC");
+        string sql = "SELECT * FROM Bills";
+        if (!string.IsNullOrEmpty(userId))
+        {
+            sql += " WHERE CreatedBy = @UserId";
+        }
+        sql += " ORDER BY Date DESC";
+        
+        var bills = await connection.QueryAsync<Bill>(sql, new { UserId = userId });
         
         if (bills.Any())
         {
@@ -71,8 +78,8 @@ public class SqliteBillRepository : IBillRepository
         try
         {
             const string insertBillSql = @"
-                INSERT INTO Bills (Id, BillNumber, CustomerName, CustomerEmail, CustomerMobile, Date, Subtotal, DiscountAmount, DiscountPercentage, TaxAmount, Total, AmountPaid, Status, CreatedBy)
-                VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy)";
+                INSERT INTO Bills (Id, BillNumber, CustomerName, CustomerEmail, CustomerMobile, Date, DateTime, Subtotal, DiscountAmount, DiscountPercentage, TaxAmount, Total, AmountPaid, Status, CreatedBy)
+                VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @DateTime, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy)";
 
             await connection.ExecuteAsync(insertBillSql, bill, transaction);
 

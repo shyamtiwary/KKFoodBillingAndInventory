@@ -47,12 +47,39 @@ public class UsersController : ControllerBase
         }
 
         // Prevent disapproving the main admin
-        if (email == "admin")
+        if (email.ToLower() == "admin")
         {
             return BadRequest("Cannot disapprove the main admin account");
         }
 
         user.IsApproved = false;
+        await _userRepository.UpdateAsync(user);
+        return Ok(user);
+    }
+
+    [HttpPost("enable/{email}")]
+    public async Task<IActionResult> Enable(string email)
+    {
+        var user = await _userRepository.GetByEmailAsync(email);
+        if (user == null) return NotFound();
+
+        user.IsActive = true;
+        await _userRepository.UpdateAsync(user);
+        return Ok(user);
+    }
+
+    [HttpPost("disable/{email}")]
+    public async Task<IActionResult> Disable(string email)
+    {
+        var user = await _userRepository.GetByEmailAsync(email);
+        if (user == null) return NotFound();
+
+        if (email.ToLower() == "admin")
+        {
+            return BadRequest("Cannot disable the main admin account");
+        }
+
+        user.IsActive = false;
         await _userRepository.UpdateAsync(user);
         return Ok(user);
     }

@@ -105,6 +105,7 @@ const Inventory = () => {
         sellPrice,
         stock,
         lowStockThreshold,
+        createdAt: new Date().toISOString(),
       };
 
       const addedProduct = await productManager.add(product);
@@ -299,6 +300,7 @@ const Inventory = () => {
                   <th className="text-right py-3 px-4 font-semibold">Cost Price</th>
                   <th className="text-right py-3 px-4 font-semibold">Selling Price</th>
                   <th className="text-right py-3 px-4 font-semibold">Stock</th>
+                  <th className="text-left py-3 px-4 font-semibold">Date & Time</th>
                   <th className="text-center py-3 px-4 font-semibold">Status</th>
                   <th className="text-center py-3 px-4 font-semibold">Actions</th>
                 </tr>
@@ -323,6 +325,14 @@ const Inventory = () => {
                         <span className={product.stock <= product.lowStockThreshold ? 'text-warning font-semibold' : ''}>
                           {formatQuantity(product.stock)}
                         </span>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-muted-foreground">
+                        {product.createdAt ? (
+                          <>
+                            <div>{new Date(product.createdAt).toLocaleDateString()}</div>
+                            <div className="text-xs">{new Date(product.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                          </>
+                        ) : '-'}
                       </td>
                       <td className="py-3 px-4 text-center">
                         <Badge

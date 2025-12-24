@@ -28,25 +28,30 @@ public class SqliteCustomerRepository : ICustomerRepository
             "SELECT * FROM Customers WHERE Mobile = @Mobile", new { Mobile = mobile });
     }
 
-    public async Task<IEnumerable<Customer>> GetAllAsync()
+    public async Task<IEnumerable<Customer>> GetAllAsync(string? userId = null)
     {
         using var connection = _connectionFactory.CreateConnection();
-        return await connection.QueryAsync<Customer>("SELECT * FROM Customers");
+        string sql = "SELECT * FROM Customers";
+        if (!string.IsNullOrEmpty(userId))
+        {
+            sql += " WHERE CreatedBy = @UserId";
+        }
+        return await connection.QueryAsync<Customer>(sql, new { UserId = userId });
     }
 
     public async Task AddAsync(Customer customer)
     {
         using var connection = _connectionFactory.CreateConnection();
         await connection.ExecuteAsync(
-            @"INSERT INTO Customers (Id, Name, Mobile, Email, Balance) 
-              VALUES (@Id, @Name, @Mobile, @Email, @Balance)", customer);
+            @"INSERT INTO Customers (Id, Name, Mobile, Email, Balance, CreatedBy, CreatedAt) 
+              VALUES (@Id, @Name, @Mobile, @Email, @Balance, @CreatedBy, @CreatedAt)", customer);
     }
 
     public async Task UpdateAsync(Customer customer)
     {
         using var connection = _connectionFactory.CreateConnection();
         await connection.ExecuteAsync(
-            @"UPDATE Customers SET Name = @Name, Mobile = @Mobile, Email = @Email, Balance = @Balance 
+            @"UPDATE Customers SET Name = @Name, Mobile = @Mobile, Email = @Email, Balance = @Balance, CreatedBy = @CreatedBy, CreatedAt = @CreatedAt 
               WHERE Id = @Id", customer);
     }
 

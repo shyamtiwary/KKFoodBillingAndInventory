@@ -31,8 +31,8 @@ public class PostgreSqlProductRepository : IProductRepository
     {
         using var connection = _connectionFactory.CreateConnection();
         const string sql = @"
-            INSERT INTO products (id, name, sku, category, costprice, sellprice, stock, lowstockthreshold) 
-            VALUES (@Id, @Name, @Sku, @Category, @CostPrice, @SellPrice, @Stock, @LowStockThreshold)";
+            INSERT INTO products (id, name, sku, category, costprice, sellprice, stock, lowstockthreshold, createdat) 
+            VALUES (@Id, @Name, @Sku, @Category, @CostPrice, @SellPrice, @Stock, @LowStockThreshold, @CreatedAt)";
 
         await connection.ExecuteAsync(sql, product);
         return product;
@@ -43,7 +43,7 @@ public class PostgreSqlProductRepository : IProductRepository
         using var connection = _connectionFactory.CreateConnection();
         const string sql = @"
             UPDATE products 
-            SET name = @Name, sku = @Sku, category = @Category, costprice = @CostPrice, sellprice = @SellPrice, stock = @Stock, lowstockthreshold = @LowStockThreshold
+            SET name = @Name, sku = @Sku, category = @Category, costprice = @CostPrice, sellprice = @SellPrice, stock = @Stock, lowstockthreshold = @LowStockThreshold, createdat = @CreatedAt
             WHERE id = @Id";
 
         var rows = await connection.ExecuteAsync(sql, product);

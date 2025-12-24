@@ -6,5 +6,7 @@ public class Customer
     public string Name { get; set; } = string.Empty;
     public string Mobile { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
-    public decimal Balance { get; set; } // Positive for debit (customer owes us), negative for credit
+    public decimal Balance { get; set; }
+    public string CreatedBy { get; set; } = "admin";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -115,14 +115,15 @@ export class LocalProductService implements IProductService {
             sellPrice: row.price, // Map price to sellPrice
             costPrice: row.costPrice || 0, // Default to 0 if missing
             stock: row.stock,
-            lowStockThreshold: row.lowStockThreshold
+            lowStockThreshold: row.lowStockThreshold,
+            createdAt: row.createdAt
         }));
     }
 
     async add(product: Product): Promise<Product> {
         const query = `
-            INSERT INTO products (id, sku, name, category, price, costPrice, stock, lowStockThreshold)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO products (id, sku, name, category, price, costPrice, stock, lowStockThreshold, createdAt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         await databaseService.run(query, [
             product.id,
@@ -132,7 +133,8 @@ export class LocalProductService implements IProductService {
             product.sellPrice,
             product.costPrice,
             product.stock,
-            product.lowStockThreshold
+            product.lowStockThreshold,
+            product.createdAt || new Date().toISOString()
         ]);
         return product;
     }

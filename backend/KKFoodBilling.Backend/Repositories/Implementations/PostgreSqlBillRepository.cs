@@ -15,10 +15,17 @@ public class PostgreSqlBillRepository : IBillRepository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<IEnumerable<Bill>> GetAllAsync()
+    public async Task<IEnumerable<Bill>> GetAllAsync(string? userId = null)
     {
         using var connection = _connectionFactory.CreateConnection();
-        var bills = await connection.QueryAsync<Bill>("SELECT * FROM bills ORDER BY date DESC");
+        string sql = "SELECT * FROM bills";
+        if (!string.IsNullOrEmpty(userId))
+        {
+            sql += " WHERE createdby = @UserId";
+        }
+        sql += " ORDER BY date DESC";
+        
+        var bills = await connection.QueryAsync<Bill>(sql, new { UserId = userId });
         
         if (bills.Any())
         {
@@ -71,8 +78,8 @@ public class PostgreSqlBillRepository : IBillRepository
         try
         {
             const string insertBillSql = @"
-                INSERT INTO bills (id, billnumber, customername, customeremail, customermobile, date, subtotal, discountamount, discountpercentage, taxamount, total, amountpaid, status, createdby)
-                VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy)";
+                INSERT INTO bills (id, billnumber, customername, customeremail, customermobile, date, datetime, subtotal, discountamount, discountpercentage, taxamount, total, amountpaid, status, createdby)
+                VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @DateTime, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy)";
 
             await connection.ExecuteAsync(insertBillSql, bill, transaction);
 

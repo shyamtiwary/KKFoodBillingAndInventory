@@ -15,18 +15,17 @@ public class MsAccessBillRepository : IBillRepository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<IEnumerable<Bill>> GetAllAsync()
+    public async Task<IEnumerable<Bill>> GetAllAsync(string? userId = null)
     {
         using var connection = _connectionFactory.CreateConnection();
-        // We need to fetch bills. Fetching items for ALL bills might be heavy if we do it in one go with join.
-        // Or we can just fetch bills and fetch items if needed? 
-        // Usually the list view just needs totals. But let's follow the model.
-        // For Access, multiple result sets aren't supported well.
-        // I'll fetch Bills, then fetch all Items and map in memory, or just fetch Bills if items aren't strictly needed for the list?
-        // The frontend likely expects items.
-        // Let's do a simple query for Bills first.
+        string sql = "SELECT * FROM Bills";
+        if (!string.IsNullOrEmpty(userId))
+        {
+            sql += " WHERE CreatedBy = ?";
+        }
+        sql += " ORDER BY [Date] DESC";
         
-        var bills = await connection.QueryAsync<Bill>("SELECT * FROM Bills ORDER BY [Date] DESC");
+        var bills = await connection.QueryAsync<Bill>(sql, new { UserId = userId });
         
         // For now, let's not fetch items for the list view to keep it fast, 
         // unless the frontend explicitly needs them for the list.

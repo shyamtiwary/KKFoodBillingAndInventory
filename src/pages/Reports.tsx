@@ -124,7 +124,7 @@ const Reports = () => {
         doc.text("Sales Report", 14, 22);
         doc.setFontSize(11);
         doc.text(`Period: ${startDate || 'All time'} to ${endDate || 'All time'}`, 14, 30);
-        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 36);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 36);
 
         // Table
         const tableColumn = ["Product Name", "Quantity Sold", "Revenue", "Invoice Count"];

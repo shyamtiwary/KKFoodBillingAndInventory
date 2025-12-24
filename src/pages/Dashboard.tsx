@@ -99,6 +99,8 @@ const Dashboard = () => {
     }
   });
 
+  const totalDiscount = filteredBills.reduce((sum, bill) => sum + (bill.discountAmount || 0), 0);
+
   const totalRevenue = filteredBills
     .filter(b => b.status === 'paid')
     .reduce((sum, bill) => sum + bill.total, 0);
@@ -209,6 +211,13 @@ const Dashboard = () => {
           variant="success"
         />
         <StatCard
+          title="Total Discount"
+          value={`₹${formatAmount(totalDiscount)}`}
+          icon={DollarSign}
+          description={`Given across bills (${dateFilter})`}
+          variant="warning"
+        />
+        <StatCard
           title="Inventory Value"
           value={`₹${formatAmount(inventoryValue)}`}
           icon={Package}
@@ -287,6 +296,21 @@ const Dashboard = () => {
                   <div>
                     <p className="font-medium">{bill.billNumber}</p>
                     <p className="text-sm text-muted-foreground">{bill.customerName}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {bill.datetime ? (
+                        new Date(bill.datetime).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
+                      ) : (
+                        new Date(bill.date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric'
+                        })
+                      )}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold">₹{formatAmount(bill.total)}</p>

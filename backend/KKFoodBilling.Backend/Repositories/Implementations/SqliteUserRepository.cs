@@ -32,8 +32,8 @@ public class SqliteUserRepository : IUserRepository
     {
         using var connection = _connectionFactory.CreateConnection();
         await connection.ExecuteAsync(@"
-            INSERT INTO Users (Email, Role, Name, Password, IsApproved)
-            VALUES (@Email, @Role, @Name, @Password, @IsApproved)",
+            INSERT INTO Users (Id, Email, Role, Name, Password, IsApproved, IsActive, AccessType, CreatedAt)
+            VALUES (@Id, @Email, @Role, @Name, @Password, @IsApproved, @IsActive, @AccessType, @CreatedAt)",
             user);
     }
 
@@ -42,7 +42,7 @@ public class SqliteUserRepository : IUserRepository
         using var connection = _connectionFactory.CreateConnection();
         await connection.ExecuteAsync(@"
             UPDATE Users 
-            SET Role = @Role, Name = @Name, Password = @Password, IsApproved = @IsApproved
+            SET Role = @Role, Name = @Name, Password = @Password, IsApproved = @IsApproved, IsActive = @IsActive, AccessType = @AccessType, CreatedAt = @CreatedAt
             WHERE Email = @Email",
             user);
     }

@@ -18,7 +18,13 @@ public class CustomersController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Customer>>> GetAll()
     {
-        var customers = await _customerRepository.GetAllAsync();
+        var userEmail = Request.Headers["X-User-Email"].ToString();
+        var userRole = Request.Headers["X-User-Role"].ToString();
+
+        // Filter by user if not admin
+        string? filterUserId = userRole == "admin" ? null : userEmail;
+
+        var customers = await _customerRepository.GetAllAsync(filterUserId);
         return Ok(customers);
     }
 
@@ -43,6 +49,12 @@ public class CustomersController : ControllerBase
     {
         var existing = await _customerRepository.GetByMobileAsync(customer.Mobile);
         if (existing != null) return BadRequest("Customer with this mobile already exists");
+
+        // Set CreatedBy from header if not provided
+        if (string.IsNullOrEmpty(customer.CreatedBy))
+        {
+            customer.CreatedBy = Request.Headers["X-User-Email"].ToString() ?? "admin";
+        }
 
         await _customerRepository.AddAsync(customer);
         return CreatedAtAction(nameof(GetById), new { id = customer.Id }, customer);

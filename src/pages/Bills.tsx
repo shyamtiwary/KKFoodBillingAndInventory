@@ -132,7 +132,12 @@ const Bills = () => {
         const response = await fetch(`${API_BASE_URL}/api/Bills?startDate=${startDate}&endDate=${endDate}`);
         if (response.ok) {
           const data = await response.json();
-          setBills(data);
+          // Map backend DateTime to frontend datetime
+          const mappedData = data.map((bill: any) => ({
+            ...bill,
+            datetime: bill.dateTime || bill.datetime
+          }));
+          setBills(mappedData);
         }
       } catch (error) {
         console.error("Error fetching filtered bills", error);
@@ -568,6 +573,22 @@ const Bills = () => {
                     </tr>
                   );
                 })}
+                {filteredBills.length > 0 && (
+                  <tr className="bg-muted/50 font-bold border-t-2">
+                    <td colSpan={3} className="py-3 px-4 text-right">Total:</td>
+                    <td className="py-3 px-4 text-right text-green-600">₹{filteredBills.reduce((sum, b) => sum + (b.discountAmount || 0), 0).toFixed(2)}</td>
+                    <td className="py-3 px-4 text-right">₹{filteredBills.reduce((sum, b) => sum + b.total, 0).toFixed(2)}</td>
+                    <td className="py-3 px-4 text-right text-green-600">₹{filteredBills.reduce((sum, b) => {
+                      const adv = b.amountPaid !== undefined ? b.amountPaid : (b.status === 'paid' ? b.total : 0);
+                      return sum + adv;
+                    }, 0).toFixed(2)}</td>
+                    <td className="py-3 px-4 text-right text-red-600">₹{filteredBills.reduce((sum, b) => {
+                      const adv = b.amountPaid !== undefined ? b.amountPaid : (b.status === 'paid' ? b.total : 0);
+                      return sum + (b.total - adv);
+                    }, 0).toFixed(2)}</td>
+                    <td colSpan={2}></td>
+                  </tr>
+                )}
               </tbody>
             </table>
             {filteredBills.length > 0 && (

@@ -26,6 +26,10 @@ public class AuthController : ControllerBase
             {
                 return Forbid("Account pending approval");
             }
+            if (!user.IsActive)
+            {
+                return Forbid("Account is disabled. Please contact admin.");
+            }
             return Ok(user);
         }
 
@@ -47,7 +51,9 @@ public class AuthController : ControllerBase
             Name = request.Name,
             Password = request.Password,
             Role = "staff", // Default role
-            IsApproved = false // Requires approval
+            IsApproved = false, // Requires approval
+            IsActive = true,
+            AccessType = "web" // Default to web, can be updated later
         };
 
         await _userRepository.AddAsync(newUser);

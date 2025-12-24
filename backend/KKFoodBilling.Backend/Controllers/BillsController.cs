@@ -18,7 +18,13 @@ public class BillsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Bill>>> Get([FromQuery] string? startDate, [FromQuery] string? endDate)
     {
-        var bills = await _repository.GetAllAsync();
+        var userEmail = Request.Headers["X-User-Email"].ToString();
+        var userRole = Request.Headers["X-User-Role"].ToString();
+
+        // Filter by user if not admin
+        string? filterUserId = userRole == "admin" ? null : userEmail;
+        
+        var bills = await _repository.GetAllAsync(filterUserId);
         
         if (!string.IsNullOrEmpty(startDate) && !string.IsNullOrEmpty(endDate))
         {
@@ -55,6 +61,12 @@ public class BillsController : ControllerBase
         if (string.IsNullOrEmpty(bill.Id))
         {
             bill.Id = Guid.NewGuid().ToString();
+        }
+
+        // Set CreatedBy from header if not provided
+        if (string.IsNullOrEmpty(bill.CreatedBy))
+        {
+            bill.CreatedBy = Request.Headers["X-User-Email"].ToString() ?? "admin";
         }
         
         await _repository.AddAsync(bill);
