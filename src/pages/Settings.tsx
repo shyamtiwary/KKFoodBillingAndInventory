@@ -218,7 +218,7 @@ const Settings = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
+                            <table className="w-full text-sm min-w-[800px]">
                                 <thead>
                                     <tr className="border-b">
                                         <th className="text-left py-2">Name</th>
@@ -232,7 +232,7 @@ const Settings = () => {
                                 </thead>
                                 <tbody>
                                     {users.map((u) => (
-                                        <tr key={u.email} className="border-b last:border-0">
+                                        <tr key={u.email} className="border-b last:border-0 whitespace-nowrap">
                                             <td className="py-3">{u.name}</td>
                                             <td className="py-3">{u.email}</td>
                                             <td className="py-3 capitalize">{u.role}</td>
