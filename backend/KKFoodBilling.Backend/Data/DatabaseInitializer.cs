@@ -25,6 +25,7 @@ public class DatabaseInitializer
         connection.Open();
 
         CreateTables(connection);
+        MigrateTables(connection);
         SeedData(connection);
     }
 
@@ -172,6 +173,46 @@ public class DatabaseInitializer
                     CreatedBy TEXT DEFAULT 'admin',
                     CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
                 )");
+        }
+
+    private void MigrateTables(IDbConnection connection)
+    {
+        var provider = _configuration["DatabaseProvider"] ?? "SQLite";
+        var isPostgreSQL = provider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase);
+
+        if (isPostgreSQL)
+        {
+            // PostgreSQL Migrations
+            connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
+            connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS costprice NUMERIC(10,2)");
+            connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS sellprice NUMERIC(10,2)");
+            connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS stock NUMERIC(10,2)");
+            connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS lowstockthreshold INTEGER");
+
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS datetime TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
+
+            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
+
+            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
+            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT");
+            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS accesstype TEXT DEFAULT 'web'");
+        }
+        else
+        {
+            // SQLite Migrations (Try-Catch for missing IF NOT EXISTS in older versions)
+            try { connection.Execute("ALTER TABLE Products ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
+            try { connection.Execute("ALTER TABLE Products ADD COLUMN CostPrice REAL"); } catch { }
+            try { connection.Execute("ALTER TABLE Products ADD COLUMN SellPrice REAL"); } catch { }
+            try { connection.Execute("ALTER TABLE Products ADD COLUMN Stock REAL"); } catch { }
+            try { connection.Execute("ALTER TABLE Products ADD COLUMN LowStockThreshold INTEGER"); } catch { }
+
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN DateTime TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
+
+            try { connection.Execute("ALTER TABLE Customers ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
+
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN Password TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN AccessType TEXT DEFAULT 'web'"); } catch { }
         }
     }
 
