@@ -168,6 +168,19 @@ public class DatabaseInitializer
                     Id TEXT PRIMARY KEY,
                     Name TEXT,
                     Mobile TEXT UNIQUE,
+                    Email TEXT,
+                    Balance REAL,
+                    CreatedBy TEXT DEFAULT 'admin',
+                    CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+                )");
+        }
+    }
+
+    private void MigrateTables(IDbConnection connection)
+    {
+        var provider = _configuration["DatabaseProvider"] ?? "SQLite";
+        var isPostgreSQL = provider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase);
+
         if (isPostgreSQL)
         {
             // PostgreSQL Migrations
