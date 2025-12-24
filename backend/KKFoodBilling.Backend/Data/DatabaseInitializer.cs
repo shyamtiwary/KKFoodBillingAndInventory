@@ -176,6 +176,7 @@ public class DatabaseInitializer
         }
     }
 
+
     private void MigrateTables(IDbConnection connection)
     {
         var provider = _configuration["DatabaseProvider"] ?? "SQLite";
@@ -183,45 +184,124 @@ public class DatabaseInitializer
 
         if (isPostgreSQL)
         {
-            // PostgreSQL Migrations
-            connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
+            // PostgreSQL Migrations - Add ALL possible columns
+            // Products table
+            connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS id TEXT");
+            connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS name TEXT");
+            connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS sku TEXT");
+            connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT");
             connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS costprice NUMERIC(10,2)");
             connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS sellprice NUMERIC(10,2)");
             connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS stock NUMERIC(10,2)");
             connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS lowstockthreshold INTEGER");
+            connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
 
+            // Bills table
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS id TEXT");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS billnumber TEXT");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS customername TEXT");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS customeremail TEXT");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS customermobile TEXT");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS date TEXT");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS subtotal NUMERIC(10,2)");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS discountamount NUMERIC(10,2)");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS discountpercentage NUMERIC(10,2)");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS taxamount NUMERIC(10,2)");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS total NUMERIC(10,2)");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS amountpaid NUMERIC(10,2)");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS status TEXT");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS createdby TEXT");
             connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS datetime TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
 
-            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
+            // BillItems table
+            connection.Execute("ALTER TABLE billitems ADD COLUMN IF NOT EXISTS billid TEXT");
+            connection.Execute("ALTER TABLE billitems ADD COLUMN IF NOT EXISTS productid TEXT");
+            connection.Execute("ALTER TABLE billitems ADD COLUMN IF NOT EXISTS productname TEXT");
+            connection.Execute("ALTER TABLE billitems ADD COLUMN IF NOT EXISTS quantity NUMERIC(10,2)");
+            connection.Execute("ALTER TABLE billitems ADD COLUMN IF NOT EXISTS price NUMERIC(10,2)");
+            connection.Execute("ALTER TABLE billitems ADD COLUMN IF NOT EXISTS total NUMERIC(10,2)");
 
-            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
+            // Users table
             connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS id TEXT");
+            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT");
+            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT");
+            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT");
             connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT");
-            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS accesstype TEXT DEFAULT 'web'");
-            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS isactive BOOLEAN DEFAULT TRUE");
             connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS isapproved BOOLEAN DEFAULT FALSE");
+            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS isactive BOOLEAN DEFAULT TRUE");
+            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS accesstype TEXT DEFAULT 'web'");
+            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
+
+            // Customers table
+            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS id TEXT");
+            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS name TEXT");
+            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS mobile TEXT");
+            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS email TEXT");
+            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS balance NUMERIC(10,2)");
+            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS createdby TEXT DEFAULT 'admin'");
+            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
         }
         else
         {
-            // SQLite Migrations (Try-Catch for missing IF NOT EXISTS in older versions)
-            try { connection.Execute("ALTER TABLE Products ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
+            // SQLite Migrations - Add ALL possible columns
+            // Products table
+            try { connection.Execute("ALTER TABLE Products ADD COLUMN Id TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Products ADD COLUMN Name TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Products ADD COLUMN Sku TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Products ADD COLUMN Category TEXT"); } catch { }
             try { connection.Execute("ALTER TABLE Products ADD COLUMN CostPrice REAL"); } catch { }
             try { connection.Execute("ALTER TABLE Products ADD COLUMN SellPrice REAL"); } catch { }
             try { connection.Execute("ALTER TABLE Products ADD COLUMN Stock REAL"); } catch { }
             try { connection.Execute("ALTER TABLE Products ADD COLUMN LowStockThreshold INTEGER"); } catch { }
+            try { connection.Execute("ALTER TABLE Products ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
 
+            // Bills table
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN Id TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN BillNumber TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN CustomerName TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN CustomerEmail TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN CustomerMobile TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN Date TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN Subtotal REAL"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN DiscountAmount REAL"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN DiscountPercentage REAL"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN TaxAmount REAL"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN Total REAL"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN AmountPaid REAL"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN Status TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN CreatedBy TEXT"); } catch { }
             try { connection.Execute("ALTER TABLE Bills ADD COLUMN DateTime TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
 
-            try { connection.Execute("ALTER TABLE Customers ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
+            // BillItems table
+            try { connection.Execute("ALTER TABLE BillItems ADD COLUMN BillId TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE BillItems ADD COLUMN ProductId TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE BillItems ADD COLUMN ProductName TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE BillItems ADD COLUMN Quantity REAL"); } catch { }
+            try { connection.Execute("ALTER TABLE BillItems ADD COLUMN Price REAL"); } catch { }
+            try { connection.Execute("ALTER TABLE BillItems ADD COLUMN Total REAL"); } catch { }
 
-            try { connection.Execute("ALTER TABLE Users ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
+            // Users table
             try { connection.Execute("ALTER TABLE Users ADD COLUMN Id TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN Email TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN Role TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN Name TEXT"); } catch { }
             try { connection.Execute("ALTER TABLE Users ADD COLUMN Password TEXT"); } catch { }
-            try { connection.Execute("ALTER TABLE Users ADD COLUMN AccessType TEXT DEFAULT 'web'"); } catch { }
-            try { connection.Execute("ALTER TABLE Users ADD COLUMN IsActive INTEGER DEFAULT 1"); } catch { }
             try { connection.Execute("ALTER TABLE Users ADD COLUMN IsApproved INTEGER DEFAULT 0"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN IsActive INTEGER DEFAULT 1"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN AccessType TEXT DEFAULT 'web'"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
+
+            // Customers table
+            try { connection.Execute("ALTER TABLE Customers ADD COLUMN Id TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Customers ADD COLUMN Name TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Customers ADD COLUMN Mobile TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Customers ADD COLUMN Email TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Customers ADD COLUMN Balance REAL"); } catch { }
+            try { connection.Execute("ALTER TABLE Customers ADD COLUMN CreatedBy TEXT DEFAULT 'admin'"); } catch { }
+            try { connection.Execute("ALTER TABLE Customers ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
         }
     }
+
 
     private void SeedData(IDbConnection connection)
     {

@@ -85,32 +85,53 @@ export class DatabaseService {
 
             await this.db.execute(schema);
 
-            // Schema Migrations for existing tables
-            try {
-                await this.db.execute('ALTER TABLE products ADD COLUMN costPrice REAL;');
-            } catch (e) { /* ignore if exists */ }
-            try {
-                await this.db.execute('ALTER TABLE products ADD COLUMN lowStockThreshold INTEGER;');
-            } catch (e) { /* ignore if exists */ }
-            try {
-                await this.db.execute('ALTER TABLE products ADD COLUMN createdAt TEXT DEFAULT CURRENT_TIMESTAMP;');
-            } catch (e) { /* ignore if exists */ }
+            // ===== COMPREHENSIVE SCHEMA MIGRATIONS =====
+            // This ensures ALL columns exist, even if the app was updated from an older version
 
-            try {
-                await this.db.execute('ALTER TABLE customers ADD COLUMN createdAt TEXT DEFAULT CURRENT_TIMESTAMP;');
-            } catch (e) { /* ignore if exists */ }
+            // Products table - Add ALL possible columns
+            try { await this.db.execute('ALTER TABLE products ADD COLUMN id TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE products ADD COLUMN sku TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE products ADD COLUMN name TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE products ADD COLUMN category TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE products ADD COLUMN price REAL;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE products ADD COLUMN costPrice REAL;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE products ADD COLUMN stock INTEGER;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE products ADD COLUMN lowStockThreshold INTEGER;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE products ADD COLUMN createdAt TEXT DEFAULT CURRENT_TIMESTAMP;'); } catch (e) { /* ignore if exists */ }
 
-            try {
-                await this.db.execute('ALTER TABLE users ADD COLUMN createdAt TEXT DEFAULT CURRENT_TIMESTAMP;');
-            } catch (e) { /* ignore if exists */ }
-            try {
-                await this.db.execute('ALTER TABLE users ADD COLUMN password TEXT;');
-            } catch (e) { /* ignore if exists */ }
-            try {
-                await this.db.execute('ALTER TABLE users ADD COLUMN accessType TEXT DEFAULT "mobile";');
-            } catch (e) { /* ignore if exists */ }
+            // Bills table - Add ALL possible columns
+            try { await this.db.execute('ALTER TABLE bills ADD COLUMN id TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE bills ADD COLUMN billNumber TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE bills ADD COLUMN date TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE bills ADD COLUMN customerName TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE bills ADD COLUMN customerEmail TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE bills ADD COLUMN customerMobile TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE bills ADD COLUMN total REAL;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE bills ADD COLUMN status TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE bills ADD COLUMN createdBy TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE bills ADD COLUMN datetime TEXT DEFAULT CURRENT_TIMESTAMP;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE bills ADD COLUMN data TEXT;'); } catch (e) { /* ignore if exists */ }
 
-            console.log("SQLite Database initialized successfully");
+            // Users table - Add ALL possible columns
+            try { await this.db.execute('ALTER TABLE users ADD COLUMN email TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE users ADD COLUMN name TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE users ADD COLUMN role TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE users ADD COLUMN password TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE users ADD COLUMN isApproved INTEGER;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE users ADD COLUMN isActive INTEGER DEFAULT 1;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE users ADD COLUMN accessType TEXT DEFAULT "mobile";'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE users ADD COLUMN createdAt TEXT DEFAULT CURRENT_TIMESTAMP;'); } catch (e) { /* ignore if exists */ }
+
+            // Customers table - Add ALL possible columns
+            try { await this.db.execute('ALTER TABLE customers ADD COLUMN id TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE customers ADD COLUMN name TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE customers ADD COLUMN mobile TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE customers ADD COLUMN email TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE customers ADD COLUMN balance REAL;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE customers ADD COLUMN createdBy TEXT;'); } catch (e) { /* ignore if exists */ }
+            try { await this.db.execute('ALTER TABLE customers ADD COLUMN createdAt TEXT DEFAULT CURRENT_TIMESTAMP;'); } catch (e) { /* ignore if exists */ }
+
+            console.log("SQLite Database initialized successfully with all schema migrations applied");
 
         } catch (error) {
             console.error("Error initializing SQLite database:", error);
