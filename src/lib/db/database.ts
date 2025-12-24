@@ -3,12 +3,13 @@ import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacito
 
 export class DatabaseService {
     private static instance: DatabaseService;
-    private sqlite: SQLiteConnection;
+    private sqlite: SQLiteConnection | null = null;
     private db: SQLiteDBConnection | null = null;
     private dbName = 'kkfoodbilling';
+    private isInitialized = false;
 
     private constructor() {
-        this.sqlite = new SQLiteConnection(CapacitorSQLite);
+        // Don't initialize SQLiteConnection here - wait for initialize() to be called
     }
 
     public static getInstance(): DatabaseService {
@@ -20,11 +21,19 @@ export class DatabaseService {
 
     public async initialize(): Promise<void> {
         if (!Capacitor.isNativePlatform()) {
-            console.log("Web platform detected: Skipping SQLite initialization (or use jeep-sqlite if configured)");
+            console.log("Web platform detected: Skipping SQLite initialization");
+            return;
+        }
+
+        if (this.isInitialized) {
+            console.log("Database already initialized");
             return;
         }
 
         try {
+            // Initialize SQLiteConnection only when we're sure the platform is ready
+            this.sqlite = new SQLiteConnection(CapacitorSQLite);
+
             this.db = await this.sqlite.createConnection(
                 this.dbName,
                 false,
@@ -131,6 +140,7 @@ export class DatabaseService {
             try { await this.db.execute('ALTER TABLE customers ADD COLUMN createdBy TEXT;'); } catch (e) { /* ignore if exists */ }
             try { await this.db.execute('ALTER TABLE customers ADD COLUMN createdAt TEXT DEFAULT CURRENT_TIMESTAMP;'); } catch (e) { /* ignore if exists */ }
 
+            this.isInitialized = true;
             console.log("SQLite Database initialized successfully with all schema migrations applied");
 
         } catch (error) {
