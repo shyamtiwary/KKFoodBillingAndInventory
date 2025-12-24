@@ -50,6 +50,16 @@ public class CustomersController : ControllerBase
         var existing = await _customerRepository.GetByMobileAsync(customer.Mobile);
         if (existing != null) return BadRequest("Customer with this mobile already exists");
 
+        // Ensure required fields are set
+        if (string.IsNullOrEmpty(customer.Id))
+        {
+            customer.Id = Guid.NewGuid().ToString();
+        }
+        if (customer.CreatedAt == default)
+        {
+            customer.CreatedAt = DateTime.UtcNow;
+        }
+
         // Set CreatedBy from header if not provided
         if (string.IsNullOrEmpty(customer.CreatedBy))
         {

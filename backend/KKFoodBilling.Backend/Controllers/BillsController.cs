@@ -62,6 +62,10 @@ public class BillsController : ControllerBase
         {
             bill.Id = Guid.NewGuid().ToString();
         }
+        if (bill.DateTime == null)
+        {
+            bill.DateTime = DateTime.UtcNow;
+        }
 
         // Set CreatedBy from header if not provided
         if (string.IsNullOrEmpty(bill.CreatedBy))

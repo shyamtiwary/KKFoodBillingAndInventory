@@ -29,6 +29,10 @@ public class ProductsController : ControllerBase
         {
             product.Id = Guid.NewGuid().ToString();
         }
+        if (product.CreatedAt == default)
+        {
+            product.CreatedAt = DateTime.UtcNow;
+        }
         
         await _repository.AddAsync(product);
         

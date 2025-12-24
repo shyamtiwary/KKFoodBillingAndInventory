@@ -47,13 +47,15 @@ public class AuthController : ControllerBase
 
         var newUser = new User
         {
+            Id = Guid.NewGuid().ToString(),
             Email = request.Email,
             Name = request.Name,
             Password = request.Password,
             Role = "staff", // Default role
             IsApproved = false, // Requires approval
             IsActive = true,
-            AccessType = "web" // Default to web, can be updated later
+            AccessType = "web", // Default to web, can be updated later
+            CreatedAt = DateTime.UtcNow
         };
 
         await _userRepository.AddAsync(newUser);
