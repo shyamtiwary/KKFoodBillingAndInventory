@@ -73,6 +73,18 @@ export const userManager = {
         return success;
     },
 
+    add: async (user: User): Promise<boolean> => {
+        const success = await service.add(user);
+        if (success && isNative) {
+            try {
+                await apiService.add(user);
+            } catch (e) {
+                console.warn("Failed to sync add to API:", e);
+            }
+        }
+        return success;
+    },
+
     syncUsers: async (): Promise<void> => {
         if (!isNative) return;
         try {

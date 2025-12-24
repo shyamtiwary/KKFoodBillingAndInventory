@@ -11,6 +11,7 @@ export interface IUserService {
     enable(email: string): Promise<boolean>;
     disable(email: string): Promise<boolean>;
     delete(email: string): Promise<boolean>;
+    add(user: User): Promise<boolean>;
     sync(users: User[]): Promise<void>;
 }
 
@@ -50,6 +51,20 @@ export class ApiUserService implements IUserService {
     async delete(email: string): Promise<boolean> {
         const response = await fetch(`${API_URL}/${email}`, { method: 'DELETE' });
         return response.ok;
+    }
+
+    async add(user: User): Promise<boolean> {
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(user)
+            });
+            return response.ok;
+        } catch (error) {
+            console.error('Error adding user:', error);
+            return false;
+        }
     }
 
     async sync(users: User[]): Promise<void> {
@@ -93,6 +108,22 @@ export class LocalUserService implements IUserService {
 
     async delete(email: string): Promise<boolean> {
         await databaseService.run('DELETE FROM users WHERE email = ?', [email]);
+        return true;
+    }
+
+    async add(user: User): Promise<boolean> {
+        const query = `INSERT INTO users (id, email, name, role, password, isApproved, isActive, accessType, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        await databaseService.run(query, [
+            user.id || Date.now().toString(),
+            user.email,
+            user.name,
+            user.role,
+            user.password,
+            user.isApproved ? 1 : 0,
+            user.isActive ? 1 : 0,
+            user.accessType || 'web',
+            user.createdAt || new Date().toISOString()
+        ]);
         return true;
     }
 

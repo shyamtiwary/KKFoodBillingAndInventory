@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { dataManager } from "@/lib/dataManager";
 import { userManager } from "@/lib/userManager";
-import { Download, Upload, User, Check, X, Trash, Shield, ShieldOff, Smartphone, Monitor, RefreshCw } from "lucide-react";
+import { Download, Upload, User, Check, X, Trash, Shield, ShieldOff, Smartphone, Monitor, RefreshCw, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +20,21 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 const Settings = () => {
     const { user: currentUser } = useAuth();
@@ -29,6 +44,16 @@ const Settings = () => {
     const [users, setUsers] = useState<any[]>([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+    const [newUser, setNewUser] = useState({
+        name: '',
+        email: '',
+        password: '',
+        role: 'staff' as 'admin' | 'manager' | 'staff',
+        accessType: 'web' as 'web' | 'mobile',
+        isApproved: true,
+        isActive: true
+    });
 
     useEffect(() => {
         if (currentUser?.role === 'admin') {
@@ -135,6 +160,35 @@ const Settings = () => {
         }
     };
 
+    const handleAddUser = async () => {
+        if (!newUser.name || !newUser.email || !newUser.password) {
+            toast.error("Please fill in all required fields");
+            return;
+        }
+
+        try {
+            const success = await userManager.add(newUser as any);
+            if (success) {
+                toast.success("User added successfully");
+                setIsAddUserOpen(false);
+                setNewUser({
+                    name: '',
+                    email: '',
+                    password: '',
+                    role: 'staff',
+                    accessType: 'web',
+                    isApproved: true,
+                    isActive: true
+                });
+                loadUsers();
+            } else {
+                toast.error("Failed to add user");
+            }
+        } catch (error) {
+            toast.error("Failed to add user");
+        }
+    };
+
 
     const handleBackup = async () => {
         try {
@@ -202,18 +256,29 @@ const Settings = () => {
                                     Approve or manage user accounts.
                                 </CardDescription>
                             </div>
-                            {Capacitor.isNativePlatform() && (
+                            <div className="flex gap-2">
                                 <Button
-                                    variant="outline"
+                                    variant="default"
                                     size="sm"
-                                    onClick={handleSyncUsers}
-                                    disabled={isSyncing}
+                                    onClick={() => setIsAddUserOpen(true)}
                                     className="flex items-center gap-2"
                                 >
-                                    <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                                    {isSyncing ? 'Syncing...' : 'Sync Now'}
+                                    <Plus className="h-4 w-4" />
+                                    Add User
                                 </Button>
-                            )}
+                                {Capacitor.isNativePlatform() && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleSyncUsers}
+                                        disabled={isSyncing}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                                        {isSyncing ? 'Syncing...' : 'Sync Now'}
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -359,6 +424,80 @@ const Settings = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New User</DialogTitle>
+                        <DialogDescription>
+                            Create a new user account with specific role and access type.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="name">Name</Label>
+                            <Input
+                                id="name"
+                                value={newUser.name}
+                                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                                placeholder="Enter full name"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                value={newUser.email}
+                                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                                placeholder="Enter email"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                value={newUser.password}
+                                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                                placeholder="Enter password"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="role">Role</Label>
+                            <Select value={newUser.role} onValueChange={(value: any) => setNewUser({ ...newUser, role: value })}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="manager">Manager</SelectItem>
+                                    <SelectItem value="staff">Staff</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="accessType">Access Type</Label>
+                            <Select value={newUser.accessType} onValueChange={(value: any) => setNewUser({ ...newUser, accessType: value })}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select access type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="web">Web</SelectItem>
+                                    <SelectItem value="mobile">Mobile</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleAddUser}>
+                            Add User
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

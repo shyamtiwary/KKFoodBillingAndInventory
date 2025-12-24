@@ -23,6 +23,25 @@ public class UsersController : ControllerBase
         return Ok(users);
     }
 
+    [HttpPost]
+    public async Task<ActionResult<User>> Create(User user)
+    {
+        var existing = await _userRepository.GetByEmailAsync(user.Email);
+        if (existing != null) return BadRequest("User already exists");
+
+        if (string.IsNullOrEmpty(user.Id))
+        {
+            user.Id = Guid.NewGuid().ToString();
+        }
+        if (user.CreatedAt == default)
+        {
+            user.CreatedAt = DateTime.UtcNow;
+        }
+        
+        await _userRepository.AddAsync(user);
+        return Ok(user);
+    }
+
     [HttpPost("approve/{email}")]
     public async Task<IActionResult> Approve(string email)
     {

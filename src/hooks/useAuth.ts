@@ -13,6 +13,8 @@ export interface User {
   isActive: boolean;
   accessType: string;
   createdAt?: string;
+  id?: string;
+  password?: string;
 }
 
 const AUTH_STORAGE_KEY = 'kkfood_auth';
