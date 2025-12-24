@@ -198,6 +198,8 @@ public class DatabaseInitializer
             connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS id TEXT");
             connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT");
             connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS accesstype TEXT DEFAULT 'web'");
+            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS isactive BOOLEAN DEFAULT TRUE");
+            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS isapproved BOOLEAN DEFAULT FALSE");
         }
         else
         {
@@ -216,6 +218,8 @@ public class DatabaseInitializer
             try { connection.Execute("ALTER TABLE Users ADD COLUMN Id TEXT"); } catch { }
             try { connection.Execute("ALTER TABLE Users ADD COLUMN Password TEXT"); } catch { }
             try { connection.Execute("ALTER TABLE Users ADD COLUMN AccessType TEXT DEFAULT 'web'"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN IsActive INTEGER DEFAULT 1"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN IsApproved INTEGER DEFAULT 0"); } catch { }
         }
     }
 
