@@ -84,6 +84,32 @@ export class DatabaseService {
       `;
 
             await this.db.execute(schema);
+
+            // Schema Migrations for existing tables
+            try {
+                await this.db.execute('ALTER TABLE products ADD COLUMN costPrice REAL;');
+            } catch (e) { /* ignore if exists */ }
+            try {
+                await this.db.execute('ALTER TABLE products ADD COLUMN lowStockThreshold INTEGER;');
+            } catch (e) { /* ignore if exists */ }
+            try {
+                await this.db.execute('ALTER TABLE products ADD COLUMN createdAt TEXT DEFAULT CURRENT_TIMESTAMP;');
+            } catch (e) { /* ignore if exists */ }
+
+            try {
+                await this.db.execute('ALTER TABLE customers ADD COLUMN createdAt TEXT DEFAULT CURRENT_TIMESTAMP;');
+            } catch (e) { /* ignore if exists */ }
+
+            try {
+                await this.db.execute('ALTER TABLE users ADD COLUMN createdAt TEXT DEFAULT CURRENT_TIMESTAMP;');
+            } catch (e) { /* ignore if exists */ }
+            try {
+                await this.db.execute('ALTER TABLE users ADD COLUMN password TEXT;');
+            } catch (e) { /* ignore if exists */ }
+            try {
+                await this.db.execute('ALTER TABLE users ADD COLUMN accessType TEXT DEFAULT "mobile";');
+            } catch (e) { /* ignore if exists */ }
+
             console.log("SQLite Database initialized successfully");
 
         } catch (error) {
