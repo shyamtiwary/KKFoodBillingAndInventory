@@ -35,6 +35,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 
 const Settings = () => {
     const { user: currentUser } = useAuth();
@@ -45,6 +47,7 @@ const Settings = () => {
     const [isLoadingUsers, setIsLoadingUsers] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+    const [showDeletedUsers, setShowDeletedUsers] = useState(false);
     const [newUser, setNewUser] = useState({
         name: '',
         email: '',
@@ -62,12 +65,12 @@ const Settings = () => {
                 handleSyncUsers();
             }
         }
-    }, [currentUser]);
+    }, [currentUser, showDeletedUsers]);
 
     const loadUsers = async () => {
         setIsLoadingUsers(true);
         try {
-            const data = await userManager.getAll();
+            const data = await userManager.getAll(showDeletedUsers);
             setUsers(data);
         } catch (error) {
             console.error("Error loading users:", error);
@@ -151,7 +154,11 @@ const Settings = () => {
             const success = await userManager.delete(email);
             if (success) {
                 toast.success("User deleted");
-                loadUsers();
+                if (showDeletedUsers) {
+                    setUsers(users.map(u => u.email === email ? { ...u, isDeleted: true } : u));
+                } else {
+                    setUsers(users.filter(u => u.email !== email));
+                }
             } else {
                 toast.error("Failed to delete user");
             }
@@ -256,7 +263,15 @@ const Settings = () => {
                                     Approve or manage user accounts.
                                 </CardDescription>
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 items-center">
+                                <div className="flex items-center space-x-2 mr-4">
+                                    <Switch
+                                        id="show-deleted-users"
+                                        checked={showDeletedUsers}
+                                        onCheckedChange={setShowDeletedUsers}
+                                    />
+                                    <Label htmlFor="show-deleted-users">Show Deleted</Label>
+                                </div>
                                 <Button
                                     variant="default"
                                     size="sm"
@@ -299,7 +314,7 @@ const Settings = () => {
                                 </thead>
                                 <tbody>
                                     {users.map((u) => (
-                                        <tr key={u.email} className="border-b last:border-0 whitespace-nowrap">
+                                        <tr key={u.email} className={`border-b last:border-0 whitespace-nowrap ${u.isDeleted ? 'opacity-50 bg-muted/20' : ''}`}>
                                             <td className="py-3">{u.name}</td>
                                             <td className="py-3">{u.email}</td>
                                             <td className="py-3 capitalize">{u.role}</td>
@@ -319,44 +334,54 @@ const Settings = () => {
                                             </td>
                                             <td className="py-3 text-center">
                                                 <div className="flex flex-col items-center gap-1">
-                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${u.isApproved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                        {u.isApproved ? 'Approved' : 'Pending'}
-                                                    </span>
-                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${u.isActive ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
-                                                        {u.isActive ? 'Active' : 'Disabled'}
-                                                    </span>
+                                                    {u.isDeleted ? (
+                                                        <Badge variant="destructive">Deleted</Badge>
+                                                    ) : (
+                                                        <>
+                                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${u.isApproved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                                {u.isApproved ? 'Approved' : 'Pending'}
+                                                            </span>
+                                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${u.isActive ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
+                                                                {u.isActive ? 'Active' : 'Disabled'}
+                                                            </span>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="py-3 text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    {u.isApproved ? (
-                                                        <Button size="sm" variant="outline" onClick={() => handleDisapprove(u.email)} title="Disapprove" disabled={u.email === 'admin'}>
-                                                            <X className="h-4 w-4" />
-                                                        </Button>
-                                                    ) : (
-                                                        <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={() => handleApprove(u.email)} title="Approve">
-                                                            <Check className="h-4 w-4" />
-                                                        </Button>
+                                                    {!u.isDeleted && (
+                                                        <>
+                                                            {u.isApproved ? (
+                                                                <Button size="sm" variant="outline" onClick={() => handleDisapprove(u.email)} title="Disapprove" disabled={u.email === 'admin'}>
+                                                                    <X className="h-4 w-4" />
+                                                                </Button>
+                                                            ) : (
+                                                                <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={() => handleApprove(u.email)} title="Approve">
+                                                                    <Check className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                            {u.isActive ? (
+                                                                <Button size="sm" variant="outline" onClick={() => handleDisable(u.email)} title="Disable User" disabled={u.email === 'admin'}>
+                                                                    <ShieldOff className="h-4 w-4" />
+                                                                </Button>
+                                                            ) : (
+                                                                <Button size="sm" variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleEnable(u.email)} title="Enable User">
+                                                                    <Shield className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDeleteUser(u.email)} title="Delete" disabled={u.email === 'admin'}>
+                                                                <Trash className="h-4 w-4" />
+                                                            </Button>
+                                                        </>
                                                     )}
-                                                    {u.isActive ? (
-                                                        <Button size="sm" variant="outline" onClick={() => handleDisable(u.email)} title="Disable User" disabled={u.email === 'admin'}>
-                                                            <ShieldOff className="h-4 w-4" />
-                                                        </Button>
-                                                    ) : (
-                                                        <Button size="sm" variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleEnable(u.email)} title="Enable User">
-                                                            <Shield className="h-4 w-4" />
-                                                        </Button>
-                                                    )}
-                                                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDeleteUser(u.email)} title="Delete" disabled={u.email === 'admin'}>
-                                                        <Trash className="h-4 w-4" />
-                                                    </Button>
                                                 </div>
                                             </td>
                                         </tr>
                                     ))}
                                     {users.length === 0 && !isLoadingUsers && (
                                         <tr>
-                                            <td colSpan={5} className="text-center py-4 text-muted-foreground">No users found</td>
+                                            <td colSpan={7} className="text-center py-4 text-muted-foreground">No users found</td>
                                         </tr>
                                     )}
                                 </tbody>

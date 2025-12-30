@@ -27,11 +27,13 @@ import {
 } from "@/components/ui/select";
 import { downloadFile } from "@/lib/utils/fileDownloader";
 import { formatAmount, formatQuantity } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [stockFilter, setStockFilter] = useState("all");
   const [products, setProducts] = useState<Product[]>([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -48,13 +50,16 @@ const Inventory = () => {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      productManager.initialize();
-      const allProducts = await productManager.getAll();
-      console.log("Fetched products:", allProducts);
-      setProducts(allProducts);
+      try {
+        const allProducts = await productManager.getAll(showDeleted);
+        setProducts(allProducts);
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+        toast.error("Failed to load inventory");
+      }
     };
     fetchProducts();
-  }, []);
+  }, [showDeleted]);
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
@@ -73,11 +78,12 @@ const Inventory = () => {
   });
 
   const refreshProducts = async () => {
-    const allProducts = await productManager.getAll();
+    const allProducts = await productManager.getAll(showDeleted);
     setProducts(allProducts);
   };
 
   const getStockStatus = (product: Product) => {
+    if (product.isDeleted) return { label: "Deleted", variant: "destructive" as const };
     if (product.stock === 0) return { label: "Out of Stock", variant: "destructive" as const };
     if (product.stock <= product.lowStockThreshold) return { label: "Low Stock", variant: "outline" as const };
     return { label: "In Stock", variant: "default" as const };
@@ -172,7 +178,11 @@ const Inventory = () => {
   const confirmDelete = async () => {
     if (productToDelete) {
       await productManager.delete(productToDelete.id);
-      setProducts(products.filter(p => p.id !== productToDelete.id));
+      if (showDeleted) {
+        setProducts(products.map(p => p.id === productToDelete.id ? { ...p, isDeleted: true } : p));
+      } else {
+        setProducts(products.filter(p => p.id !== productToDelete.id));
+      }
       toast.success("Product deleted successfully");
       setProductToDelete(null);
     }
@@ -245,7 +255,15 @@ const Inventory = () => {
             Manage your product inventory
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex items-center space-x-2 mr-4">
+            <Switch
+              id="show-deleted"
+              checked={showDeleted}
+              onCheckedChange={setShowDeleted}
+            />
+            <Label htmlFor="show-deleted">Show Deleted</Label>
+          </div>
           <Button variant="outline" onClick={handleExportInventoryPDF}>
             <FileText className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">Export PDF</span>
@@ -309,7 +327,7 @@ const Inventory = () => {
                 {filteredProducts.map((product) => {
                   const stockStatus = getStockStatus(product);
                   return (
-                    <tr key={product.id} className="border-b hover:bg-muted/50 transition-colors">
+                    <tr key={product.id} className={`border-b hover:bg-muted/50 transition-colors ${product.isDeleted ? 'opacity-50 bg-muted/20' : ''}`}>
                       <td className="py-3 px-4">
                         <span className="font-mono text-sm">{product.sku}</span>
                       </td>
@@ -344,24 +362,28 @@ const Inventory = () => {
                       </td>
                       <td className="py-3 px-4 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditDialog(product)}
-                            className="h-8 w-8"
-                            title="Edit Product"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteClick(product)}
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            title="Delete Product"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {!product.isDeleted && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditDialog(product)}
+                                className="h-8 w-8"
+                                title="Edit Product"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteClick(product)}
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                title="Delete Product"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -326,8 +326,8 @@ const Bills = () => {
 
   const handleDeleteClick = (bill: Bill, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent row click
-    if (!user || user.role !== 'admin') {
-      toast.error("Only admins can delete bills");
+    if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
+      toast.error("Only admins and managers can delete bills");
       return;
     }
     setBillToDelete(bill);
@@ -563,7 +563,7 @@ const Bills = () => {
                           <Button variant="ghost" size="sm" onClick={(e) => handleDownloadPDF(bill, e)} title="Download PDF">
                             <Download className="h-4 w-4" />
                           </Button>
-                          {user?.role === 'admin' && (
+                          {(user?.role === 'admin' || user?.role === 'manager') && (
                             <Button variant="ghost" size="sm" onClick={(e) => handleDeleteClick(bill, e)} title="Delete Bill" className="text-destructive hover:text-destructive">
                               <Trash2 className="h-4 w-4" />
                             </Button>

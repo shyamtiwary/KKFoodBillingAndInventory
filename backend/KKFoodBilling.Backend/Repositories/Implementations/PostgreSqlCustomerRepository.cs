@@ -28,14 +28,26 @@ public class PostgreSqlCustomerRepository : ICustomerRepository
             "SELECT * FROM customers WHERE mobile = @Mobile", new { Mobile = mobile });
     }
 
-    public async Task<IEnumerable<Customer>> GetAllAsync(string? userId = null)
+    public async Task<IEnumerable<Customer>> GetAllAsync(string? userId = null, bool includeDeleted = false)
     {
         using var connection = _connectionFactory.CreateConnection();
         string sql = "SELECT * FROM customers";
+        var conditions = new List<string>();
+        
         if (!string.IsNullOrEmpty(userId))
         {
-            sql += " WHERE createdby = @UserId";
+            conditions.Add("createdby = @UserId");
         }
+        if (!includeDeleted)
+        {
+            conditions.Add("isdeleted = FALSE");
+        }
+        
+        if (conditions.Any())
+        {
+            sql += " WHERE " + string.Join(" AND ", conditions);
+        }
+        
         return await connection.QueryAsync<Customer>(sql, new { UserId = userId });
     }
 
@@ -58,7 +70,7 @@ public class PostgreSqlCustomerRepository : ICustomerRepository
     public async Task<bool> DeleteAsync(string id)
     {
         using var connection = _connectionFactory.CreateConnection();
-        var affected = await connection.ExecuteAsync("DELETE FROM customers WHERE id = @Id", new { Id = id });
+        var affected = await connection.ExecuteAsync("UPDATE customers SET isdeleted = TRUE WHERE id = @Id", new { Id = id });
         return affected > 0;
     }
 }

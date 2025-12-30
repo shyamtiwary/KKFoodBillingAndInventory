@@ -10,8 +10,8 @@ export const productManager = {
     // No-op
   },
 
-  getAll: async (): Promise<Product[]> => {
-    return await service.getAll();
+  getAll: async (includeDeleted: boolean = false): Promise<Product[]> => {
+    return await service.getAll(includeDeleted);
   },
 
   add: async (product: Product): Promise<Product> => {

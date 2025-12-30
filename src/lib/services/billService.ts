@@ -165,7 +165,7 @@ export class LocalBillService implements IBillService {
         let query = 'SELECT * FROM bills';
         let params: any[] = [];
 
-        if (user && user.role !== 'admin') {
+        if (user && user.role !== 'admin' && user.role !== 'manager') {
             query += ' WHERE createdBy = ?';
             params.push(user.email);
         }

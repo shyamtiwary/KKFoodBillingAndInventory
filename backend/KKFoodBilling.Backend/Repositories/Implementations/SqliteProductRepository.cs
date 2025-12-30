@@ -15,10 +15,15 @@ public class SqliteProductRepository : IProductRepository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<IEnumerable<Product>> GetAllAsync()
+    public async Task<IEnumerable<Product>> GetAllAsync(bool includeDeleted = false)
     {
         using var connection = _connectionFactory.CreateConnection();
-        return await connection.QueryAsync<Product>("SELECT * FROM Products");
+        string sql = "SELECT * FROM Products";
+        if (!includeDeleted)
+        {
+            sql += " WHERE IsDeleted = 0";
+        }
+        return await connection.QueryAsync<Product>(sql);
     }
 
     public async Task<Product?> GetByIdAsync(string id)
@@ -31,8 +36,8 @@ public class SqliteProductRepository : IProductRepository
     {
         using var connection = _connectionFactory.CreateConnection();
         const string sql = @"
-            INSERT INTO Products (Id, Name, Sku, Category, CostPrice, SellPrice, Stock, LowStockThreshold, CreatedAt) 
-            VALUES (@Id, @Name, @Sku, @Category, @CostPrice, @SellPrice, @Stock, @LowStockThreshold, @CreatedAt)";
+            INSERT INTO Products (Id, Name, Sku, Category, CostPrice, SellPrice, Stock, LowStockThreshold, CreatedAt, IsDeleted) 
+            VALUES (@Id, @Name, @Sku, @Category, @CostPrice, @SellPrice, @Stock, @LowStockThreshold, @CreatedAt, @IsDeleted)";
 
         await connection.ExecuteAsync(sql, product);
         return product;
@@ -43,7 +48,7 @@ public class SqliteProductRepository : IProductRepository
         using var connection = _connectionFactory.CreateConnection();
         const string sql = @"
             UPDATE Products 
-            SET Name = @Name, Sku = @Sku, Category = @Category, CostPrice = @CostPrice, SellPrice = @SellPrice, Stock = @Stock, LowStockThreshold = @LowStockThreshold, CreatedAt = @CreatedAt
+            SET Name = @Name, Sku = @Sku, Category = @Category, CostPrice = @CostPrice, SellPrice = @SellPrice, Stock = @Stock, LowStockThreshold = @LowStockThreshold, CreatedAt = @CreatedAt, IsDeleted = @IsDeleted
             WHERE Id = @Id";
 
         var rows = await connection.ExecuteAsync(sql, product);
@@ -53,7 +58,7 @@ public class SqliteProductRepository : IProductRepository
     public async Task<bool> DeleteAsync(string id)
     {
         using var connection = _connectionFactory.CreateConnection();
-        const string sql = "DELETE FROM Products WHERE Id = @Id";
+        const string sql = "UPDATE Products SET IsDeleted = 1 WHERE Id = @Id";
         var rows = await connection.ExecuteAsync(sql, new { Id = id });
         return rows > 0;
     }

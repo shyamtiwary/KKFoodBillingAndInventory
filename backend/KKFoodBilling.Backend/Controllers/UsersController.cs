@@ -16,10 +16,10 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<User>>> GetAll()
+    public async Task<ActionResult<IEnumerable<User>>> GetAll([FromQuery] bool includeDeleted = false)
     {
         // In a real app, we would check if the requester is an admin
-        var users = await _userRepository.GetAllAsync();
+        var users = await _userRepository.GetAllAsync(includeDeleted);
         return Ok(users);
     }
 

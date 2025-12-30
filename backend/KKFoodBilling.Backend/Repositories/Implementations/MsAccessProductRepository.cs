@@ -16,7 +16,7 @@ public class MsAccessProductRepository : IProductRepository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<IEnumerable<Product>> GetAllAsync()
+    public async Task<IEnumerable<Product>> GetAllAsync(bool includeDeleted = false)
     {
         using var connection = _connectionFactory.CreateConnection();
         return await connection.QueryAsync<Product>("SELECT * FROM Products");

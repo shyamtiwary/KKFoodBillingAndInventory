@@ -16,9 +16,9 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Product>>> Get()
+    public async Task<ActionResult<IEnumerable<Product>>> Get([FromQuery] bool includeDeleted = false)
     {
-        var products = await _repository.GetAllAsync();
+        var products = await _repository.GetAllAsync(includeDeleted);
         return Ok(products);
     }
 

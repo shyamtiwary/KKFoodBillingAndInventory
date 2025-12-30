@@ -71,7 +71,8 @@ export class DatabaseService {
         );
 
         CREATE TABLE IF NOT EXISTS users (
-          email TEXT PRIMARY KEY,
+          id TEXT PRIMARY KEY,
+          email TEXT UNIQUE NOT NULL,
           name TEXT,
           role TEXT,
           password TEXT,
@@ -122,6 +123,7 @@ export class DatabaseService {
             try { await this.db.execute('ALTER TABLE bills ADD COLUMN data TEXT;'); } catch (e) { /* ignore if exists */ }
 
             // Users table - Add ALL possible columns
+            try { await this.db.execute('ALTER TABLE users ADD COLUMN id TEXT;'); } catch (e) { /* ignore if exists */ }
             try { await this.db.execute('ALTER TABLE users ADD COLUMN email TEXT;'); } catch (e) { /* ignore if exists */ }
             try { await this.db.execute('ALTER TABLE users ADD COLUMN name TEXT;'); } catch (e) { /* ignore if exists */ }
             try { await this.db.execute('ALTER TABLE users ADD COLUMN role TEXT;'); } catch (e) { /* ignore if exists */ }

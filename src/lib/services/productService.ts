@@ -4,7 +4,7 @@ import { SERVICE_URLS } from '@/config/apiConfig';
 const API_URL = SERVICE_URLS.INVENTORY;
 
 export interface IProductService {
-    getAll(): Promise<Product[]>;
+    getAll(includeDeleted?: boolean): Promise<Product[]>;
     add(product: Product): Promise<Product>;
     update(id: string, product: Partial<Product>): Promise<Product | undefined>;
     delete(id: string): Promise<void>;
@@ -12,9 +12,13 @@ export interface IProductService {
 }
 
 export class ApiProductService implements IProductService {
-    async getAll(): Promise<Product[]> {
+    async getAll(includeDeleted: boolean = false): Promise<Product[]> {
         try {
-            const response = await fetch(API_URL);
+            const url = new URL(API_URL);
+            if (includeDeleted) {
+                url.searchParams.append('includeDeleted', 'true');
+            }
+            const response = await fetch(url.toString());
             if (!response.ok) {
                 console.warn('Failed to fetch products from API');
                 return [];
@@ -62,20 +66,21 @@ export class ApiProductService implements IProductService {
 import { productStore } from '../storage/localStore';
 
 export class WebProductService implements IProductService {
-    async getAll(): Promise<Product[]> {
+    async getAll(includeDeleted: boolean = false): Promise<Product[]> {
         const products = await productStore.getItem<Product[]>('products');
-        return products || [];
+        if (!products) return [];
+        return includeDeleted ? products : products.filter(p => !p.isDeleted);
     }
 
     async add(product: Product): Promise<Product> {
-        const products = await this.getAll();
+        const products = await productStore.getItem<Product[]>('products') || [];
         const updated = [...products, product];
         await productStore.setItem('products', updated);
         return product;
     }
 
     async update(id: string, product: Partial<Product>): Promise<Product | undefined> {
-        const products = await this.getAll();
+        const products = await productStore.getItem<Product[]>('products') || [];
         const index = products.findIndex(p => p.id === id);
         if (index === -1) return undefined;
 
@@ -86,13 +91,16 @@ export class WebProductService implements IProductService {
     }
 
     async delete(id: string): Promise<void> {
-        const products = await this.getAll();
-        const filtered = products.filter(p => p.id !== id);
-        await productStore.setItem('products', filtered);
+        const products = await productStore.getItem<Product[]>('products') || [];
+        const index = products.findIndex(p => p.id === id);
+        if (index !== -1) {
+            products[index].isDeleted = true;
+            await productStore.setItem('products', products);
+        }
     }
 
     async generateId(): Promise<string> {
-        const products = await this.getAll();
+        const products = await this.getAll(true);
         const maxId = products.reduce((max, product) => {
             const num = parseInt(product.id);
             return num > max ? num : max;
@@ -104,8 +112,12 @@ export class WebProductService implements IProductService {
 import { databaseService } from '@/lib/db/database';
 
 export class LocalProductService implements IProductService {
-    async getAll(): Promise<Product[]> {
-        const result = await databaseService.query('SELECT * FROM products');
+    async getAll(includeDeleted: boolean = false): Promise<Product[]> {
+        let query = 'SELECT * FROM products';
+        if (!includeDeleted) {
+            query += ' WHERE isDeleted = 0';
+        }
+        const result = await databaseService.query(query);
         // Map database columns to Product object (if needed, but names match)
         return result.map(row => ({
             id: row.id,
@@ -116,14 +128,15 @@ export class LocalProductService implements IProductService {
             costPrice: row.costPrice || 0, // Default to 0 if missing
             stock: row.stock,
             lowStockThreshold: row.lowStockThreshold,
-            createdAt: row.createdAt
+            createdAt: row.createdAt,
+            isDeleted: !!row.isDeleted
         }));
     }
 
     async add(product: Product): Promise<Product> {
         const query = `
-            INSERT INTO products (id, sku, name, category, price, costPrice, stock, lowStockThreshold, createdAt)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO products (id, sku, name, category, price, costPrice, stock, lowStockThreshold, createdAt, isDeleted)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         await databaseService.run(query, [
             product.id,
@@ -134,7 +147,8 @@ export class LocalProductService implements IProductService {
             product.costPrice,
             product.stock,
             product.lowStockThreshold,
-            product.createdAt || new Date().toISOString()
+            product.createdAt || new Date().toISOString(),
+            0
         ]);
         return product;
     }
@@ -154,7 +168,7 @@ export class LocalProductService implements IProductService {
 
         const query = `
             UPDATE products 
-            SET sku = ?, name = ?, category = ?, price = ?, costPrice = ?, stock = ?, lowStockThreshold = ?
+            SET sku = ?, name = ?, category = ?, price = ?, costPrice = ?, stock = ?, lowStockThreshold = ?, isDeleted = ?
             WHERE id = ?
         `;
 
@@ -166,6 +180,7 @@ export class LocalProductService implements IProductService {
             merged.costPrice,
             merged.stock,
             merged.lowStockThreshold,
+            merged.isDeleted ? 1 : 0,
             id
         ]);
 
@@ -173,7 +188,7 @@ export class LocalProductService implements IProductService {
     }
 
     async delete(id: string): Promise<void> {
-        await databaseService.run('DELETE FROM products WHERE id = ?', [id]);
+        await databaseService.run('UPDATE products SET isDeleted = 1 WHERE id = ?', [id]);
     }
 
     async generateId(): Promise<string> {

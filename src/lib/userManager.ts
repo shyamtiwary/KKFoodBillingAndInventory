@@ -8,8 +8,8 @@ const localService = new LocalUserService();
 const service: IUserService = isNative ? localService : apiService;
 
 export const userManager = {
-    getAll: async (): Promise<User[]> => {
-        return await service.getAll();
+    getAll: async (includeDeleted: boolean = false): Promise<User[]> => {
+        return await service.getAll(includeDeleted);
     },
 
     approve: async (email: string): Promise<boolean> => {

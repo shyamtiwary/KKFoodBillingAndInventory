@@ -16,15 +16,15 @@ public class CustomersController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Customer>>> GetAll()
+    public async Task<ActionResult<IEnumerable<Customer>>> GetAll([FromQuery] bool includeDeleted = false)
     {
         var userEmail = Request.Headers["X-User-Email"].ToString();
         var userRole = Request.Headers["X-User-Role"].ToString();
 
-        // Filter by user if not admin
-        string? filterUserId = userRole == "admin" ? null : userEmail;
+        // Filter by user if not admin or manager
+        string? filterUserId = (userRole == "admin" || userRole == "manager") ? null : userEmail;
 
-        var customers = await _customerRepository.GetAllAsync(filterUserId);
+        var customers = await _customerRepository.GetAllAsync(filterUserId, includeDeleted);
         return Ok(customers);
     }
 

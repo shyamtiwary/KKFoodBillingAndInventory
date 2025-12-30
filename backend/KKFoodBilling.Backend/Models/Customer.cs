@@ -9,4 +9,5 @@ public class Customer
     public decimal Balance { get; set; }
     public string CreatedBy { get; set; } = "admin";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public bool IsDeleted { get; set; } = false;
 }

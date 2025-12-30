@@ -11,6 +11,7 @@ public class User
     public bool IsActive { get; set; } = true;
     public string AccessType { get; set; } = "web"; // "web" or "mobile"
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public bool IsDeleted { get; set; } = false;
 }
 
 public class LoginRequest

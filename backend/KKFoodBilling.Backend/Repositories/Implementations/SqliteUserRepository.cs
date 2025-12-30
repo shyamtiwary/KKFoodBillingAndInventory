@@ -22,18 +22,23 @@ public class SqliteUserRepository : IUserRepository
             "SELECT * FROM Users WHERE LOWER(Email) = LOWER(@Email)", new { Email = email });
     }
 
-    public async Task<IEnumerable<User>> GetAllAsync()
+    public async Task<IEnumerable<User>> GetAllAsync(bool includeDeleted = false)
     {
         using var connection = _connectionFactory.CreateConnection();
-        return await connection.QueryAsync<User>("SELECT * FROM Users");
+        string sql = "SELECT * FROM Users";
+        if (!includeDeleted)
+        {
+            sql += " WHERE IsDeleted = 0";
+        }
+        return await connection.QueryAsync<User>(sql);
     }
 
     public async Task AddAsync(User user)
     {
         using var connection = _connectionFactory.CreateConnection();
         await connection.ExecuteAsync(@"
-            INSERT INTO Users (Id, Email, Role, Name, Password, IsApproved, IsActive, AccessType, CreatedAt)
-            VALUES (@Id, @Email, @Role, @Name, @Password, @IsApproved, @IsActive, @AccessType, @CreatedAt)",
+            INSERT INTO Users (Id, Email, Role, Name, Password, IsApproved, IsActive, AccessType, CreatedAt, IsDeleted)
+            VALUES (@Id, @Email, @Role, @Name, @Password, @IsApproved, @IsActive, @AccessType, @CreatedAt, @IsDeleted)",
             user);
     }
 
@@ -42,7 +47,7 @@ public class SqliteUserRepository : IUserRepository
         using var connection = _connectionFactory.CreateConnection();
         await connection.ExecuteAsync(@"
             UPDATE Users 
-            SET Role = @Role, Name = @Name, Password = @Password, IsApproved = @IsApproved, IsActive = @IsActive, AccessType = @AccessType, CreatedAt = @CreatedAt
+            SET Role = @Role, Name = @Name, Password = @Password, IsApproved = @IsApproved, IsActive = @IsActive, AccessType = @AccessType, CreatedAt = @CreatedAt, IsDeleted = @IsDeleted
             WHERE Email = @Email",
             user);
     }
@@ -51,7 +56,7 @@ public class SqliteUserRepository : IUserRepository
     {
         using var connection = _connectionFactory.CreateConnection();
         var rowsAffected = await connection.ExecuteAsync(
-            "DELETE FROM Users WHERE Email = @Email", new { Email = email });
+            "UPDATE Users SET IsDeleted = 1 WHERE Email = @Email", new { Email = email });
         return rowsAffected > 0;
     }
 }

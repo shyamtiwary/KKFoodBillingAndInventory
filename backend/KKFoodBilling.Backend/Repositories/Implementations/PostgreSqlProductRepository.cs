@@ -15,10 +15,15 @@ public class PostgreSqlProductRepository : IProductRepository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<IEnumerable<Product>> GetAllAsync()
+    public async Task<IEnumerable<Product>> GetAllAsync(bool includeDeleted = false)
     {
         using var connection = _connectionFactory.CreateConnection();
-        return await connection.QueryAsync<Product>("SELECT * FROM products");
+        string sql = "SELECT * FROM products";
+        if (!includeDeleted)
+        {
+            sql += " WHERE isdeleted = FALSE";
+        }
+        return await connection.QueryAsync<Product>(sql);
     }
 
     public async Task<Product?> GetByIdAsync(string id)

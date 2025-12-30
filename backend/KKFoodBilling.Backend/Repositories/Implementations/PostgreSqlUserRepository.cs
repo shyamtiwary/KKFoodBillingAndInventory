@@ -22,10 +22,15 @@ public class PostgreSqlUserRepository : IUserRepository
             "SELECT * FROM users WHERE LOWER(email) = LOWER(@Email)", new { Email = email });
     }
 
-    public async Task<IEnumerable<User>> GetAllAsync()
+    public async Task<IEnumerable<User>> GetAllAsync(bool includeDeleted = false)
     {
         using var connection = _connectionFactory.CreateConnection();
-        return await connection.QueryAsync<User>("SELECT * FROM users");
+        string sql = "SELECT * FROM users";
+        if (!includeDeleted)
+        {
+            sql += " WHERE isdeleted = FALSE";
+        }
+        return await connection.QueryAsync<User>(sql);
     }
 
     public async Task AddAsync(User user)
@@ -51,7 +56,7 @@ public class PostgreSqlUserRepository : IUserRepository
     {
         using var connection = _connectionFactory.CreateConnection();
         var rowsAffected = await connection.ExecuteAsync(
-            "DELETE FROM users WHERE email = @Email", new { Email = email });
+            "UPDATE users SET isdeleted = TRUE WHERE email = @Email", new { Email = email });
         return rowsAffected > 0;
     }
 }

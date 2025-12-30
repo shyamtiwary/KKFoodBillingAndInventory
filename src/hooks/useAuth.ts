@@ -15,6 +15,7 @@ export interface User {
   createdAt?: string;
   id?: string;
   password?: string;
+  isDeleted?: boolean;
 }
 
 const AUTH_STORAGE_KEY = 'kkfood_auth';
@@ -55,8 +56,8 @@ export const useAuth = () => {
         if (Capacitor.isNativePlatform()) {
           try {
             await databaseService.run(
-              `INSERT OR REPLACE INTO users (email, name, role, password, isApproved, isActive, accessType) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-              [userData.email, userData.name, userData.role, password, userData.isApproved ? 1 : 0, userData.isActive ? 1 : 0, userData.accessType || 'web']
+              `INSERT OR REPLACE INTO users (id, email, name, role, password, isApproved, isActive, accessType) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              [userData.id || Date.now().toString(), userData.email, userData.name, userData.role, password, userData.isApproved ? 1 : 0, userData.isActive ? 1 : 0, userData.accessType || 'web']
             );
           } catch (dbError) {
             console.error("Failed to sync user to SQLite:", dbError);
@@ -93,6 +94,7 @@ export const useAuth = () => {
             }
 
             const userData: User = {
+              id: localUser.id,
               email: localUser.email,
               name: localUser.name,
               role: localUser.role as UserRole,

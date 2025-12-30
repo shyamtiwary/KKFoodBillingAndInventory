@@ -21,8 +21,8 @@ public class BillsController : ControllerBase
         var userEmail = Request.Headers["X-User-Email"].ToString();
         var userRole = Request.Headers["X-User-Role"].ToString();
 
-        // Filter by user if not admin
-        string? filterUserId = userRole == "admin" ? null : userEmail;
+        // Filter by user if not admin or manager
+        string? filterUserId = (userRole == "admin" || userRole == "manager") ? null : userEmail;
         
         var bills = await _repository.GetAllAsync(filterUserId);
         

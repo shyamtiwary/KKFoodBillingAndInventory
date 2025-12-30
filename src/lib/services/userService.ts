@@ -5,7 +5,7 @@ import { databaseService } from '@/lib/db/database';
 const API_URL = SERVICE_URLS.AUTH.replace('Auth', 'Users');
 
 export interface IUserService {
-    getAll(): Promise<User[]>;
+    getAll(includeDeleted?: boolean): Promise<User[]>;
     approve(email: string): Promise<boolean>;
     disapprove(email: string): Promise<boolean>;
     enable(email: string): Promise<boolean>;
@@ -16,9 +16,13 @@ export interface IUserService {
 }
 
 export class ApiUserService implements IUserService {
-    async getAll(): Promise<User[]> {
+    async getAll(includeDeleted: boolean = false): Promise<User[]> {
         try {
-            const response = await fetch(API_URL);
+            const url = new URL(API_URL);
+            if (includeDeleted) {
+                url.searchParams.append('includeDeleted', 'true');
+            }
+            const response = await fetch(url.toString());
             if (response.ok) {
                 return await response.json();
             }
@@ -73,16 +77,22 @@ export class ApiUserService implements IUserService {
 }
 
 export class LocalUserService implements IUserService {
-    async getAll(): Promise<User[]> {
-        const result = await databaseService.query('SELECT * FROM users');
+    async getAll(includeDeleted: boolean = false): Promise<User[]> {
+        let query = 'SELECT * FROM users';
+        if (!includeDeleted) {
+            query += ' WHERE isDeleted = 0';
+        }
+        const result = await databaseService.query(query);
         return result.map(row => ({
+            id: row.id,
             email: row.email,
             name: row.name,
             role: row.role as UserRole,
             isApproved: row.isApproved === 1,
             isActive: row.isActive === 1,
             accessType: row.accessType || 'mobile',
-            createdAt: row.createdAt
+            createdAt: row.createdAt,
+            isDeleted: !!row.isDeleted
         }));
     }
 
@@ -107,12 +117,12 @@ export class LocalUserService implements IUserService {
     }
 
     async delete(email: string): Promise<boolean> {
-        await databaseService.run('DELETE FROM users WHERE email = ?', [email]);
+        await databaseService.run('UPDATE users SET isDeleted = 1 WHERE email = ?', [email]);
         return true;
     }
 
     async add(user: User): Promise<boolean> {
-        const query = `INSERT INTO users (id, email, name, role, password, isApproved, isActive, accessType, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        const query = `INSERT INTO users (id, email, name, role, password, isApproved, isActive, accessType, createdAt, isDeleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         await databaseService.run(query, [
             user.id || Date.now().toString(),
             user.email,
@@ -122,7 +132,8 @@ export class LocalUserService implements IUserService {
             user.isApproved ? 1 : 0,
             user.isActive ? 1 : 0,
             user.accessType || 'web',
-            user.createdAt || new Date().toISOString()
+            user.createdAt || new Date().toISOString(),
+            0
         ]);
         return true;
     }
@@ -130,8 +141,8 @@ export class LocalUserService implements IUserService {
     async sync(users: User[]): Promise<void> {
         for (const user of users) {
             await databaseService.run(
-                `INSERT OR REPLACE INTO users (email, name, role, isApproved, isActive, accessType, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [user.email, user.name, user.role, user.isApproved ? 1 : 0, user.isActive ? 1 : 0, user.accessType || 'web', user.createdAt || new Date().toISOString()]
+                `INSERT OR REPLACE INTO users (id, email, name, role, password, isApproved, isActive, accessType, createdAt, isDeleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [user.id || Date.now().toString(), user.email, user.name, user.role, user.password || '', user.isApproved ? 1 : 0, user.isActive ? 1 : 0, user.accessType || 'web', user.createdAt || new Date().toISOString(), user.isDeleted ? 1 : 0]
             );
         }
     }

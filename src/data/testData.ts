@@ -8,6 +8,7 @@ export interface Product {
   sku: string;
   lowStockThreshold: number;
   createdAt?: string;
+  isDeleted?: boolean;
 }
 
 export interface BillItem {
