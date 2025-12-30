@@ -47,7 +47,6 @@ public class DatabaseInitializer
                     sellprice NUMERIC(10,2),
                     stock NUMERIC(10,2),
                     lowstockthreshold INTEGER,
-                    lowstockthreshold INTEGER,
                     isdeleted BOOLEAN DEFAULT FALSE,
                     createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 )");
@@ -68,6 +67,7 @@ public class DatabaseInitializer
                     amountpaid NUMERIC(10,2),
                     status TEXT,
                     createdby TEXT,
+                    isdeleted BOOLEAN DEFAULT FALSE,
                     datetime TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 )");
 
@@ -92,6 +92,7 @@ public class DatabaseInitializer
                     isapproved BOOLEAN,
                     isactive BOOLEAN DEFAULT TRUE,
                     accesstype TEXT DEFAULT 'web',
+                    isdeleted BOOLEAN DEFAULT FALSE,
                     createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 )");
 
@@ -103,6 +104,7 @@ public class DatabaseInitializer
                     email TEXT,
                     balance NUMERIC(10,2),
                     createdby TEXT DEFAULT 'admin',
+                    isdeleted BOOLEAN DEFAULT FALSE,
                     createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 )");
         }
@@ -118,7 +120,6 @@ public class DatabaseInitializer
                     CostPrice REAL,
                     SellPrice REAL,
                     Stock REAL,
-                    LowStockThreshold INTEGER,
                     LowStockThreshold INTEGER,
                     IsDeleted INTEGER DEFAULT 0,
                     CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
@@ -140,6 +141,7 @@ public class DatabaseInitializer
                     AmountPaid REAL,
                     Status TEXT,
                     CreatedBy TEXT,
+                    IsDeleted INTEGER DEFAULT 0,
                     DateTime TEXT DEFAULT CURRENT_TIMESTAMP
                 )");
 
@@ -164,6 +166,7 @@ public class DatabaseInitializer
                     IsApproved INTEGER,
                     IsActive INTEGER DEFAULT 1,
                     AccessType TEXT DEFAULT 'web',
+                    IsDeleted INTEGER DEFAULT 0,
                     CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
                 )");
 
@@ -175,6 +178,7 @@ public class DatabaseInitializer
                     Email TEXT,
                     Balance REAL,
                     CreatedBy TEXT DEFAULT 'admin',
+                    IsDeleted INTEGER DEFAULT 0,
                     CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
                 )");
         }
@@ -198,7 +202,6 @@ public class DatabaseInitializer
             connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS sellprice NUMERIC(10,2)");
             connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS stock NUMERIC(10,2)");
             connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS lowstockthreshold INTEGER");
-            connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS lowstockthreshold INTEGER");
             connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS isdeleted BOOLEAN DEFAULT FALSE");
             connection.Execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
 
@@ -212,15 +215,8 @@ public class DatabaseInitializer
             connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS subtotal NUMERIC(10,2)");
             connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS discountamount NUMERIC(10,2)");
             connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS discountpercentage NUMERIC(10,2)");
-            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS taxamount NUMERIC(10,2)");
-            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS total NUMERIC(10,2)");
-            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS amountpaid NUMERIC(10,2)");
-            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS status TEXT");
-            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS createdby TEXT");
+            connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS isdeleted BOOLEAN DEFAULT FALSE");
             connection.Execute("ALTER TABLE bills ADD COLUMN IF NOT EXISTS datetime TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
-
-            // BillItems table
-            connection.Execute("ALTER TABLE billitems ADD COLUMN IF NOT EXISTS billid TEXT");
             connection.Execute("ALTER TABLE billitems ADD COLUMN IF NOT EXISTS productid TEXT");
             connection.Execute("ALTER TABLE billitems ADD COLUMN IF NOT EXISTS productname TEXT");
             connection.Execute("ALTER TABLE billitems ADD COLUMN IF NOT EXISTS quantity NUMERIC(10,2)");
@@ -228,32 +224,30 @@ public class DatabaseInitializer
             connection.Execute("ALTER TABLE billitems ADD COLUMN IF NOT EXISTS total NUMERIC(10,2)");
 
             // Users table
-            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS id TEXT");
-            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT");
-            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT");
-            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT");
-            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT");
-            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS isapproved BOOLEAN DEFAULT FALSE");
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN Id TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN Email TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN Role TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN Name TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Users ADD COLUMN Password TEXT"); } catch { }
+            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS isapproved BOOLEAN");
             connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS isactive BOOLEAN DEFAULT TRUE");
-            connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS accesstype TEXT DEFAULT 'web'");
             connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS accesstype TEXT DEFAULT 'web'");
             connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS isdeleted BOOLEAN DEFAULT FALSE");
             connection.Execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
 
             // Customers table
-            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS id TEXT");
-            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS name TEXT");
-            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS mobile TEXT");
-            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS email TEXT");
+            try { connection.Execute("ALTER TABLE Customers ADD COLUMN Id TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Customers ADD COLUMN Name TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Customers ADD COLUMN Mobile TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Customers ADD COLUMN Email TEXT"); } catch { }
             connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS balance NUMERIC(10,2)");
-            connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS createdby TEXT DEFAULT 'admin'");
             connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS createdby TEXT DEFAULT 'admin'");
             connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS isdeleted BOOLEAN DEFAULT FALSE");
             connection.Execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS createdat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP");
         }
         else
         {
-            // SQLite Migrations - Add ALL possible columns
+            // SQLite Migrations
             // Products table
             try { connection.Execute("ALTER TABLE Products ADD COLUMN Id TEXT"); } catch { }
             try { connection.Execute("ALTER TABLE Products ADD COLUMN Name TEXT"); } catch { }
@@ -262,7 +256,6 @@ public class DatabaseInitializer
             try { connection.Execute("ALTER TABLE Products ADD COLUMN CostPrice REAL"); } catch { }
             try { connection.Execute("ALTER TABLE Products ADD COLUMN SellPrice REAL"); } catch { }
             try { connection.Execute("ALTER TABLE Products ADD COLUMN Stock REAL"); } catch { }
-            try { connection.Execute("ALTER TABLE Products ADD COLUMN LowStockThreshold INTEGER"); } catch { }
             try { connection.Execute("ALTER TABLE Products ADD COLUMN LowStockThreshold INTEGER"); } catch { }
             try { connection.Execute("ALTER TABLE Products ADD COLUMN IsDeleted INTEGER DEFAULT 0"); } catch { }
             try { connection.Execute("ALTER TABLE Products ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
@@ -282,6 +275,7 @@ public class DatabaseInitializer
             try { connection.Execute("ALTER TABLE Bills ADD COLUMN AmountPaid REAL"); } catch { }
             try { connection.Execute("ALTER TABLE Bills ADD COLUMN Status TEXT"); } catch { }
             try { connection.Execute("ALTER TABLE Bills ADD COLUMN CreatedBy TEXT"); } catch { }
+            try { connection.Execute("ALTER TABLE Bills ADD COLUMN IsDeleted INTEGER DEFAULT 0"); } catch { }
             try { connection.Execute("ALTER TABLE Bills ADD COLUMN DateTime TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
 
             // BillItems table
@@ -301,7 +295,6 @@ public class DatabaseInitializer
             try { connection.Execute("ALTER TABLE Users ADD COLUMN IsApproved INTEGER DEFAULT 0"); } catch { }
             try { connection.Execute("ALTER TABLE Users ADD COLUMN IsActive INTEGER DEFAULT 1"); } catch { }
             try { connection.Execute("ALTER TABLE Users ADD COLUMN AccessType TEXT DEFAULT 'web'"); } catch { }
-            try { connection.Execute("ALTER TABLE Users ADD COLUMN AccessType TEXT DEFAULT 'web'"); } catch { }
             try { connection.Execute("ALTER TABLE Users ADD COLUMN IsDeleted INTEGER DEFAULT 0"); } catch { }
             try { connection.Execute("ALTER TABLE Users ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }
 
@@ -311,7 +304,6 @@ public class DatabaseInitializer
             try { connection.Execute("ALTER TABLE Customers ADD COLUMN Mobile TEXT"); } catch { }
             try { connection.Execute("ALTER TABLE Customers ADD COLUMN Email TEXT"); } catch { }
             try { connection.Execute("ALTER TABLE Customers ADD COLUMN Balance REAL"); } catch { }
-            try { connection.Execute("ALTER TABLE Customers ADD COLUMN CreatedBy TEXT DEFAULT 'admin'"); } catch { }
             try { connection.Execute("ALTER TABLE Customers ADD COLUMN CreatedBy TEXT DEFAULT 'admin'"); } catch { }
             try { connection.Execute("ALTER TABLE Customers ADD COLUMN IsDeleted INTEGER DEFAULT 0"); } catch { }
             try { connection.Execute("ALTER TABLE Customers ADD COLUMN CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP"); } catch { }

@@ -10,7 +10,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Download, Plus, FileSpreadsheet, Trash2, FileText } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Search, Download, Plus, FileSpreadsheet, Trash2, FileText, RefreshCw } from "lucide-react";
 import { billManager } from "@/lib/billManager";
 import { productManager } from "@/lib/productManager";
 import { customerManager } from "@/lib/customerManager";
@@ -40,11 +42,16 @@ const Bills = () => {
   const [billToUpdateStatus, setBillToUpdateStatus] = useState<Bill | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+  const [showDeleted, setShowDeleted] = useState(false);
 
   useEffect(() => {
     billManager.initialize();
     updateDateRange(timeFilter);
   }, []);
+
+  useEffect(() => {
+    loadBills();
+  }, [showDeleted]);
 
   useEffect(() => {
     if (startDate && endDate) {
@@ -108,7 +115,7 @@ const Bills = () => {
   const loadBills = async () => {
     // Native/Offline Mode
     if (Capacitor.isNativePlatform()) {
-      const allBills = await billManager.getAll();
+      const allBills = await billManager.getAll(showDeleted);
       if (startDate && endDate) {
         const start = new Date(startDate);
         const end = new Date(endDate);
@@ -129,7 +136,7 @@ const Bills = () => {
     if (startDate && endDate) {
       try {
         const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:55219';
-        const response = await fetch(`${API_BASE_URL}/api/Bills?startDate=${startDate}&endDate=${endDate}`);
+        const response = await fetch(`${API_BASE_URL}/api/Bills?startDate=${startDate}&endDate=${endDate}&includeDeleted=${showDeleted}`);
         if (response.ok) {
           const data = await response.json();
           // Map backend DateTime to frontend datetime
@@ -142,11 +149,11 @@ const Bills = () => {
       } catch (error) {
         console.error("Error fetching filtered bills", error);
         // Fallback to local if API fails on web too (optional, but good for safety)
-        const data = await billManager.getAll();
+        const data = await billManager.getAll(showDeleted);
         setBills(data);
       }
     } else {
-      const data = await billManager.getAll();
+      const data = await billManager.getAll(showDeleted);
       setBills(data);
     }
   };
@@ -330,6 +337,12 @@ const Bills = () => {
       toast.error("Only admins and managers can delete bills");
       return;
     }
+
+    if (bill.isDeleted) {
+      // Maybe implement restore functionality later?
+      return;
+    }
+
     setBillToDelete(bill);
   };
 
@@ -443,6 +456,15 @@ const Bills = () => {
         </div>
       </div>
 
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="show-deleted"
+          checked={showDeleted}
+          onCheckedChange={setShowDeleted}
+        />
+        <Label htmlFor="show-deleted">Show Deleted Bills</Label>
+      </div>
+
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row gap-4">
@@ -518,10 +540,13 @@ const Bills = () => {
                   return (
                     <tr
                       key={bill.id}
-                      className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
+                      className={`border-b transition-colors cursor-pointer ${bill.isDeleted ? 'bg-red-50 hover:bg-red-100 opacity-70' : 'hover:bg-muted/50'}`}
                       onClick={() => setSelectedBill(bill)}
                     >
-                      <td className="py-3 px-4"><span className="font-mono font-semibold">{bill.billNumber}</span></td>
+                      <td className="py-3 px-4">
+                        <span className="font-mono font-semibold">{bill.billNumber}</span>
+                        {bill.isDeleted && <Badge variant="destructive" className="ml-2 text-[10px] h-5">DELETED</Badge>}
+                      </td>
                       <td className="py-3 px-4">
                         <div>
                           <p className="font-medium">{bill.customerName}</p>
@@ -563,8 +588,13 @@ const Bills = () => {
                           <Button variant="ghost" size="sm" onClick={(e) => handleDownloadPDF(bill, e)} title="Download PDF">
                             <Download className="h-4 w-4" />
                           </Button>
-                          {(user?.role === 'admin' || user?.role === 'manager') && (
+                          {(user?.role === 'admin' || user?.role === 'manager') && !bill.isDeleted && (
                             <Button variant="ghost" size="sm" onClick={(e) => handleDeleteClick(bill, e)} title="Delete Bill" className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {bill.isDeleted && (
+                            <Button variant="ghost" size="sm" disabled title="Deleted" className="text-muted-foreground">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           )}
@@ -613,7 +643,7 @@ const Bills = () => {
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete bill {billToDelete?.billNumber}? This action cannot be undone and will restore the stock for all items in this bill.
+              Are you sure you want to delete bill {billToDelete?.billNumber}? This will hide the bill from the main list and restore the stock for all items in this bill. You can still view it by toggling "Show Deleted Bills".
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -10,8 +10,8 @@ export const billManager = {
     // No-op
   },
 
-  getAll: async (): Promise<Bill[]> => {
-    return await service.getAll();
+  getAll: async (includeDeleted: boolean = false): Promise<Bill[]> => {
+    return await service.getAll(includeDeleted);
   },
 
   add: async (bill: Bill): Promise<Bill | undefined> => {

@@ -4,7 +4,7 @@ import { SERVICE_URLS } from '@/config/apiConfig';
 const API_URL = SERVICE_URLS.BILLING;
 
 export interface IBillService {
-    getAll(): Promise<Bill[]>;
+    getAll(includeDeleted?: boolean): Promise<Bill[]>;
     add(bill: Bill): Promise<Bill | undefined>;
     update(id: string, bill: Bill): Promise<Bill | undefined>;
     delete(id: string): Promise<boolean>;
@@ -12,7 +12,7 @@ export interface IBillService {
 }
 
 export class ApiBillService implements IBillService {
-    async getAll(): Promise<Bill[]> {
+    async getAll(includeDeleted: boolean = false): Promise<Bill[]> {
         try {
             const auth = localStorage.getItem('kkfood_auth');
             const user = auth ? JSON.parse(auth) : null;
@@ -22,7 +22,12 @@ export class ApiBillService implements IBillService {
                 headers['X-User-Role'] = user.role;
             }
 
-            const response = await fetch(API_URL, { headers });
+            const url = new URL(API_URL);
+            if (includeDeleted) {
+                url.searchParams.append('includeDeleted', 'true');
+            }
+
+            const response = await fetch(url.toString(), { headers });
             if (response.ok) {
                 const bills = await response.json();
                 // Map backend DateTime to frontend datetime
@@ -116,9 +121,10 @@ export class ApiBillService implements IBillService {
 import { billStore } from '../storage/localStore';
 
 export class WebBillService implements IBillService {
-    async getAll(): Promise<Bill[]> {
+    async getAll(includeDeleted: boolean = false): Promise<Bill[]> {
         const bills = await billStore.getItem<Bill[]>('bills');
-        return bills || [];
+        if (!bills) return [];
+        return includeDeleted ? bills : bills.filter(b => !b.isDeleted);
     }
 
     async add(bill: Bill): Promise<Bill | undefined> {
@@ -139,9 +145,12 @@ export class WebBillService implements IBillService {
     }
 
     async delete(id: string): Promise<boolean> {
-        const bills = await this.getAll();
-        const filtered = bills.filter(b => b.id !== id);
-        await billStore.setItem('bills', filtered);
+        const bills = await this.getAll(true); // Get all including deleted to find the item
+        const index = bills.findIndex(b => b.id === id);
+        if (index === -1) return false;
+
+        bills[index].isDeleted = true;
+        await billStore.setItem('bills', bills);
         return true;
     }
 
@@ -158,7 +167,7 @@ export class WebBillService implements IBillService {
 import { databaseService } from '@/lib/db/database';
 
 export class LocalBillService implements IBillService {
-    async getAll(): Promise<Bill[]> {
+    async getAll(includeDeleted: boolean = false): Promise<Bill[]> {
         const auth = localStorage.getItem('kkfood_auth');
         const user = auth ? JSON.parse(auth) : null;
 
@@ -170,6 +179,10 @@ export class LocalBillService implements IBillService {
             params.push(user.email);
         }
 
+        if (!includeDeleted) {
+            query += (query.includes('WHERE') ? ' AND' : ' WHERE') + ' isDeleted = 0';
+        }
+
         query += ' ORDER BY date DESC';
 
         const result = await databaseService.query(query, params);
@@ -177,7 +190,7 @@ export class LocalBillService implements IBillService {
             // Parse the full bill object from the JSON column
             const billData = JSON.parse(row.data);
             // Ensure status matches the column (source of truth for filtering)
-            return { ...billData, status: row.status, datetime: row.datetime };
+            return { ...billData, status: row.status, datetime: row.datetime, isDeleted: !!row.isDeleted };
         });
     }
 
@@ -221,7 +234,7 @@ export class LocalBillService implements IBillService {
     }
 
     async delete(id: string): Promise<boolean> {
-        await databaseService.run('DELETE FROM bills WHERE id = ?', [id]);
+        await databaseService.run('UPDATE bills SET isDeleted = 1 WHERE id = ?', [id]);
         return true;
     }
 

@@ -18,6 +18,7 @@ public class Bill
     public decimal AmountPaid { get; set; }
     public string Status { get; set; } = "paid";
     public string CreatedBy { get; set; } = string.Empty;
+    public bool IsDeleted { get; set; } = false;
 }
 
 public class BillItem

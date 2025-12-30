@@ -15,14 +15,27 @@ public class PostgreSqlBillRepository : IBillRepository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<IEnumerable<Bill>> GetAllAsync(string? userId = null)
+    public async Task<IEnumerable<Bill>> GetAllAsync(string? userId = null, bool includeDeleted = false)
     {
         using var connection = _connectionFactory.CreateConnection();
         string sql = "SELECT * FROM bills";
+        var conditions = new List<string>();
+
         if (!string.IsNullOrEmpty(userId))
         {
-            sql += " WHERE createdby = @UserId";
+            conditions.Add("createdby = @UserId");
         }
+
+        if (!includeDeleted)
+        {
+            conditions.Add("isdeleted = FALSE");
+        }
+
+        if (conditions.Any())
+        {
+            sql += " WHERE " + string.Join(" AND ", conditions);
+        }
+
         sql += " ORDER BY date DESC";
         
         var bills = await connection.QueryAsync<Bill>(sql, new { UserId = userId });
@@ -78,8 +91,8 @@ public class PostgreSqlBillRepository : IBillRepository
         try
         {
             const string insertBillSql = @"
-                INSERT INTO bills (id, billnumber, customername, customeremail, customermobile, date, datetime, subtotal, discountamount, discountpercentage, taxamount, total, amountpaid, status, createdby)
-                VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @DateTime, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy)";
+                INSERT INTO bills (id, billnumber, customername, customeremail, customermobile, date, datetime, subtotal, discountamount, discountpercentage, taxamount, total, amountpaid, status, createdby, isdeleted)
+                VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @DateTime, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy, @IsDeleted)";
 
             await connection.ExecuteAsync(insertBillSql, bill, transaction);
 
@@ -113,26 +126,8 @@ public class PostgreSqlBillRepository : IBillRepository
     public async Task<bool> DeleteAsync(string id)
     {
         using var connection = _connectionFactory.CreateConnection();
-        if (connection.State != ConnectionState.Open) connection.Open();
-        using var transaction = connection.BeginTransaction();
-
-        try
-        {
-            // Delete bill items first (foreign key constraint)
-            const string deleteItemsSql = "DELETE FROM billitems WHERE billid = @BillId";
-            await connection.ExecuteAsync(deleteItemsSql, new { BillId = id }, transaction);
-
-            // Delete the bill
-            const string deleteBillSql = "DELETE FROM bills WHERE id = @Id";
-            var rows = await connection.ExecuteAsync(deleteBillSql, new { Id = id }, transaction);
-
-            transaction.Commit();
-            return rows > 0;
-        }
-        catch
-        {
-            transaction.Rollback();
-            throw;
-        }
+        const string sql = "UPDATE bills SET isdeleted = TRUE WHERE id = @Id";
+        var rows = await connection.ExecuteAsync(sql, new { Id = id });
+        return rows > 0;
     }
 }

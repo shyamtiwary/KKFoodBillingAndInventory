@@ -15,13 +15,21 @@ public class SqliteBillRepository : IBillRepository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<IEnumerable<Bill>> GetAllAsync(string? userId = null)
+    public async Task<IEnumerable<Bill>> GetAllAsync(string? userId = null, bool includeDeleted = false)
     {
         using var connection = _connectionFactory.CreateConnection();
         string sql = "SELECT * FROM Bills";
         if (!string.IsNullOrEmpty(userId))
         {
             sql += " WHERE CreatedBy = @UserId";
+            if (!includeDeleted)
+            {
+                sql += " AND IsDeleted = 0";
+            }
+        }
+        else if (!includeDeleted)
+        {
+            sql += " WHERE IsDeleted = 0";
         }
         sql += " ORDER BY Date DESC";
         
@@ -78,8 +86,8 @@ public class SqliteBillRepository : IBillRepository
         try
         {
             const string insertBillSql = @"
-                INSERT INTO Bills (Id, BillNumber, CustomerName, CustomerEmail, CustomerMobile, Date, DateTime, Subtotal, DiscountAmount, DiscountPercentage, TaxAmount, Total, AmountPaid, Status, CreatedBy)
-                VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @DateTime, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy)";
+                INSERT INTO Bills (Id, BillNumber, CustomerName, CustomerEmail, CustomerMobile, Date, DateTime, Subtotal, DiscountAmount, DiscountPercentage, TaxAmount, Total, AmountPaid, Status, CreatedBy, IsDeleted)
+                VALUES (@Id, @BillNumber, @CustomerName, @CustomerEmail, @CustomerMobile, @Date, @DateTime, @Subtotal, @DiscountAmount, @DiscountPercentage, @TaxAmount, @Total, @AmountPaid, @Status, @CreatedBy, @IsDeleted)";
 
             await connection.ExecuteAsync(insertBillSql, bill, transaction);
 
@@ -118,12 +126,8 @@ public class SqliteBillRepository : IBillRepository
 
         try
         {
-            // Delete bill items first (foreign key constraint)
-            const string deleteItemsSql = "DELETE FROM BillItems WHERE BillId = @BillId";
-            await connection.ExecuteAsync(deleteItemsSql, new { BillId = id }, transaction);
-
-            // Delete the bill
-            const string deleteBillSql = "DELETE FROM Bills WHERE Id = @Id";
+            // Perform soft delete
+            const string deleteBillSql = "UPDATE Bills SET IsDeleted = 1 WHERE Id = @Id";
             var rows = await connection.ExecuteAsync(deleteBillSql, new { Id = id }, transaction);
 
             transaction.Commit();

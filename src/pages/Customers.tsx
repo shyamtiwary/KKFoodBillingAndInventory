@@ -304,7 +304,7 @@ const Customers = () => {
                         <DialogTitle>Confirm Customer Deletion</DialogTitle>
                         <DialogDescription>
                             Are you sure you want to delete customer <strong>{customerToDelete?.name}</strong>?
-                            This action cannot be undone and will permanently remove all customer data.
+                            This will hide the customer from the main list. You can still view it by toggling "Show Deleted".
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

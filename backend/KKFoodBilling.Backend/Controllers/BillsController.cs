@@ -16,7 +16,7 @@ public class BillsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Bill>>> Get([FromQuery] string? startDate, [FromQuery] string? endDate)
+    public async Task<ActionResult<IEnumerable<Bill>>> Get([FromQuery] string? startDate, [FromQuery] string? endDate, [FromQuery] bool includeDeleted = false)
     {
         var userEmail = Request.Headers["X-User-Email"].ToString();
         var userRole = Request.Headers["X-User-Role"].ToString();
@@ -24,7 +24,7 @@ public class BillsController : ControllerBase
         // Filter by user if not admin or manager
         string? filterUserId = (userRole == "admin" || userRole == "manager") ? null : userEmail;
         
-        var bills = await _repository.GetAllAsync(filterUserId);
+        var bills = await _repository.GetAllAsync(filterUserId, includeDeleted);
         
         if (!string.IsNullOrEmpty(startDate) && !string.IsNullOrEmpty(endDate))
         {

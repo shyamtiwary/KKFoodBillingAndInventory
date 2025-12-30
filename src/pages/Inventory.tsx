@@ -604,7 +604,7 @@ const Inventory = () => {
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{productToDelete?.name}"? This action cannot be undone.
+              Are you sure you want to delete "{productToDelete?.name}"? This will hide the product from the main list. You can still view it by toggling "Show Deleted".
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
