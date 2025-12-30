@@ -349,6 +349,7 @@ const Inventory = () => {
                             size="icon"
                             onClick={() => openEditDialog(product)}
                             className="h-8 w-8"
+                            title="Edit Product"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -357,6 +358,7 @@ const Inventory = () => {
                             size="icon"
                             onClick={() => handleDeleteClick(product)}
                             className="h-8 w-8 text-destructive hover:text-destructive"
+                            title="Delete Product"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

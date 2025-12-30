@@ -246,7 +246,7 @@ const Settings = () => {
             {currentUser?.role === 'admin' && (
                 <Card>
                     <CardHeader>
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <CardTitle className="flex items-center gap-2">
                                     <User className="h-5 w-5" />
@@ -256,7 +256,7 @@ const Settings = () => {
                                     Approve or manage user accounts.
                                 </CardDescription>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                                 <Button
                                     variant="default"
                                     size="sm"
@@ -264,7 +264,8 @@ const Settings = () => {
                                     className="flex items-center gap-2"
                                 >
                                     <Plus className="h-4 w-4" />
-                                    Add User
+                                    <span className="hidden sm:inline">Add User</span>
+                                    <span className="sm:hidden">Add</span>
                                 </Button>
                                 {Capacitor.isNativePlatform() && (
                                     <Button
@@ -275,7 +276,8 @@ const Settings = () => {
                                         className="flex items-center gap-2"
                                     >
                                         <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                                        {isSyncing ? 'Syncing...' : 'Sync Now'}
+                                        <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
+                                        <span className="sm:hidden">{isSyncing ? 'Syncing...' : 'Sync'}</span>
                                     </Button>
                                 )}
                             </div>
