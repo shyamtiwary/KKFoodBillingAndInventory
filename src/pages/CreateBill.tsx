@@ -23,6 +23,7 @@ interface BillItem {
   productId: string;
   quantity: number | string;
   price: number;
+  searchOpen?: boolean;
 }
 
 const CreateBill = () => {
@@ -32,7 +33,7 @@ const CreateBill = () => {
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerMobile, setCustomerMobile] = useState("");
   const [customerBalance, setCustomerBalance] = useState<number | null>(null);
-  const [items, setItems] = useState<BillItem[]>([{ productId: "", quantity: 1, price: 0 }]);
+  const [items, setItems] = useState<BillItem[]>([{ productId: "", quantity: 1, price: 0, searchOpen: false }]);
   const [products, setProducts] = useState<Product[]>([]);
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [amountPaid, setAmountPaid] = useState<string>("");
@@ -79,43 +80,45 @@ const CreateBill = () => {
   }, [customerMobile]);
 
   const addItem = () => {
-    setItems([...items, { productId: "", quantity: 1, price: 0 }]);
+    setItems([...items, { productId: "", quantity: 1, price: 0, searchOpen: false }]);
   };
 
   const removeItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const updateItem = (index: number, field: keyof BillItem, value: string | number) => {
-    const newItems = [...items];
+  const updateItem = (index: number, field: keyof BillItem, value: string | number | boolean) => {
+    setItems((prevItems) => {
+      const newItems = [...prevItems];
 
-    if (field === "quantity") {
-      const product = products.find((p) => p.id === newItems[index].productId);
-      const qty = value === "" ? 0 : parseFloat(value.toString());
+      if (field === "quantity") {
+        const product = products.find((p) => p.id === newItems[index].productId);
+        const qty = value === "" ? 0 : parseFloat(value.toString());
 
-      if (product && qty > product.stock) {
-        toast.error(`Only ${product.stock} units available in stock`);
-        return;
+        if (product && qty > product.stock) {
+          toast.error(`Only ${product.stock} units available in stock`);
+          return prevItems;
+        }
+
+        if (value === "" || /^\d*\.?\d*$/.test(value.toString())) {
+          newItems[index] = { ...newItems[index], [field]: value as any };
+        }
+      } else {
+        newItems[index] = { ...newItems[index], [field]: value as any };
       }
 
-      if (value === "" || /^\d*\.?\d*$/.test(value.toString())) {
-        newItems[index] = { ...newItems[index], [field]: value };
+      if (field === "productId") {
+        const product = products.find((p) => p.id === value);
+        if (product) {
+          newItems[index].price = product.sellPrice;
+        }
+        if (index === newItems.length - 1) {
+          newItems.push({ productId: "", quantity: 1, price: 0, searchOpen: false });
+        }
       }
-    } else {
-      newItems[index] = { ...newItems[index], [field]: value };
-    }
 
-    if (field === "productId") {
-      const product = products.find((p) => p.id === value);
-      if (product) {
-        newItems[index].price = product.sellPrice;
-      }
-      if (index === items.length - 1) {
-        newItems.push({ productId: "", quantity: 1, price: 0 });
-      }
-    }
-
-    setItems(newItems);
+      return newItems;
+    });
   };
 
   const calculateSubtotal = () => {
@@ -206,7 +209,7 @@ const CreateBill = () => {
       setCustomerMobile("");
       setCustomerBalance(null);
       setExistingCustomer(null);
-      setItems([{ productId: "", quantity: 1, price: 0 }]);
+      setItems([{ productId: "", quantity: 1, price: 0, searchOpen: false }]);
       setDiscountAmount(0);
       setAmountPaid("");
       setPaymentStatus('paid');
@@ -324,21 +327,57 @@ const CreateBill = () => {
                   <div key={index} className="flex flex-col md:flex-row gap-4 items-start md:items-end border-b md:border-0 pb-4 md:pb-0 last:border-0">
                     <div className="flex-1 w-full">
                       <Label>Product</Label>
-                      <Select value={item.productId} onValueChange={(value) => updateItem(index, "productId", value)}>
-                        <SelectTrigger id={`product-trigger-${index}`}><SelectValue placeholder="Select product" /></SelectTrigger>
-                        <SelectContent>
-                          {products.map((product) => (
-                            <SelectItem
-                              key={product.id}
-                              value={product.id}
-                              disabled={product.stock <= 0}
-                            >
-                              {product.name} (Stock: {product.stock}) - ₹{product.sellPrice.toFixed(2)}
-                              {product.stock <= 0 && " [Out of Stock]"}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover open={item.searchOpen} onOpenChange={(open) => updateItem(index, "searchOpen", open)}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={item.searchOpen}
+                            className="w-full justify-between font-normal"
+                            id={`product-trigger-${index}`}
+                          >
+                            <span className="truncate mr-2">
+                              {item.productId
+                                ? products.find((p) => p.id === item.productId)?.name || "Select product"
+                                : "Select product..."}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-none" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] sm:w-[400px] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search product..." />
+                            <CommandList>
+                              <CommandEmpty>No product found.</CommandEmpty>
+                              <CommandGroup>
+                                {products.map((product) => (
+                                  <CommandItem
+                                    key={product.id}
+                                    value={`${product.name} ${product.id}`}
+                                    onSelect={() => {
+                                      if (product.stock > 0) {
+                                        updateItem(index, "productId", product.id);
+                                        updateItem(index, "searchOpen", false);
+                                      }
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4 flex-none",
+                                        item.productId === product.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <span className={product.stock <= 0 ? "text-muted-foreground" : ""}>
+                                      {product.name} (Stock: {product.stock}) - ₹{product.sellPrice.toFixed(2)}
+                                      {product.stock <= 0 && " [Out of Stock]"}
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="w-full md:w-24">
                       <Label>Quantity</Label>

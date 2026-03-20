@@ -95,18 +95,24 @@ const Inventory = () => {
     const stock = parseInt(newProduct.stock);
     const lowStockThreshold = newProduct.lowStockThreshold ? parseInt(newProduct.lowStockThreshold) : 10;
 
-    if (!newProduct.name || !newProduct.sku || !newProduct.category || isNaN(costPrice) || isNaN(sellPrice) || isNaN(stock)) {
-      toast.error("Please fill in all required fields");
+    if (!newProduct.name || isNaN(costPrice) || isNaN(sellPrice) || isNaN(stock)) {
+      toast.error("Please fill in all required fields (SKU is auto-generated)");
       return;
     }
 
     setIsAdding(true);
     try {
+      const nextSerial = products.length > 0 ? Math.max(...products.map(p => {
+        const match = p.sku.match(/\d+$/);
+        return match ? parseInt(match[0]) : 0;
+      })) + 1 : 1;
+      const generatedSku = `PRD-${nextSerial.toString().padStart(3, '0')}`;
+
       const product: Product = {
         id: await productManager.generateId(),
         name: newProduct.name,
-        sku: newProduct.sku,
-        category: newProduct.category,
+        sku: generatedSku,
+        category: "Food Item",
         costPrice,
         sellPrice,
         stock,
@@ -143,7 +149,7 @@ const Inventory = () => {
     const stock = parseInt(editingProduct.stock.toString());
     const lowStockThreshold = parseInt(editingProduct.lowStockThreshold.toString());
 
-    if (!editingProduct.name || !editingProduct.sku || !editingProduct.category || isNaN(costPrice) || isNaN(sellPrice) || isNaN(stock)) {
+    if (!editingProduct.name || !editingProduct.sku || isNaN(costPrice) || isNaN(sellPrice) || isNaN(stock)) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -151,7 +157,7 @@ const Inventory = () => {
     const updated = await productManager.update(editingProduct.id, {
       name: editingProduct.name,
       sku: editingProduct.sku,
-      category: editingProduct.category,
+      category: "Food Item",
       costPrice,
       sellPrice,
       stock,
@@ -194,7 +200,7 @@ const Inventory = () => {
   };
 
   const handleExportInventoryCSV = async () => {
-    const csvHeader = "ID,SKU,Name,Category,Cost Price,Sell Price,Stock,Low Stock Threshold\n";
+    const csvHeader = "ID,SKU,Name,Category,Cost Price (₹),Sell Price (₹),Stock (in Kgs),Low Stock Threshold\n";
     const csvRows = products
       .map(
         (p) =>
@@ -218,7 +224,7 @@ const Inventory = () => {
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 30);
 
     // Table
-    const tableColumn = ["SKU", "Name", "Category", "Cost Price", "Sell Price", "Stock", "Status"];
+    const tableColumn = ["SKU", "Name", "Category", "Cost Price (₹)", "Sell Price (₹)", "Stock (in Kgs)", "Status"];
     const tableRows = products.map(product => {
       const status = getStockStatus(product).label;
       return [
@@ -315,9 +321,9 @@ const Inventory = () => {
                   <th className="text-left py-3 px-4 font-semibold">SKU</th>
                   <th className="text-left py-3 px-4 font-semibold">Product Name</th>
                   <th className="text-left py-3 px-4 font-semibold">Category</th>
-                  <th className="text-right py-3 px-4 font-semibold">Cost Price</th>
-                  <th className="text-right py-3 px-4 font-semibold">Selling Price</th>
-                  <th className="text-right py-3 px-4 font-semibold">Stock</th>
+                  <th className="text-right py-3 px-4 font-semibold">Cost Price (₹)</th>
+                  <th className="text-right py-3 px-4 font-semibold">Selling Price (₹)</th>
+                  <th className="text-right py-3 px-4 font-semibold">Stock (in Kgs)</th>
                   <th className="text-left py-3 px-4 font-semibold">Date & Time</th>
                   <th className="text-center py-3 px-4 font-semibold">Status</th>
                   <th className="text-center py-3 px-4 font-semibold">Actions</th>
@@ -390,6 +396,17 @@ const Inventory = () => {
                   );
                 })}
               </tbody>
+              {filteredProducts.length > 0 && (
+                <tfoot className="border-t-2 border-muted bg-muted/20 font-semibold">
+                  <tr>
+                    <td colSpan={3} className="py-3 px-4 text-right">Total Inventory Value:</td>
+                    <td className="py-3 px-4 text-right text-primary">₹{formatAmount(filteredProducts.reduce((sum, p) => sum + (p.costPrice * p.stock), 0))}</td>
+                    <td className="py-3 px-4 text-right text-primary">₹{formatAmount(filteredProducts.reduce((sum, p) => sum + (p.sellPrice * p.stock), 0))}</td>
+                    <td className="py-3 px-4 text-right text-primary">{formatQuantity(filteredProducts.reduce((sum, p) => sum + p.stock, 0))}</td>
+                    <td colSpan={3}></td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
             {filteredProducts.length === 0 && (
               <div className="text-center py-12">
@@ -419,24 +436,8 @@ const Inventory = () => {
                 placeholder="e.g., Wireless Mouse"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="sku">SKU</Label>
-              <Input
-                id="sku"
-                value={newProduct.sku}
-                onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
-                placeholder="e.g., WM-001"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="category">Category</Label>
-              <Input
-                id="category"
-                value={newProduct.category}
-                onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-                placeholder="e.g., Electronics"
-              />
-            </div>
+
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="price">Cost Price ($)</Label>
@@ -523,15 +524,7 @@ const Inventory = () => {
                   placeholder="e.g., WM-001"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-category">Category</Label>
-                <Input
-                  id="edit-category"
-                  value={editingProduct.category}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
-                  placeholder="e.g., Electronics"
-                />
-              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="edit-price">Cost Price ($)</Label>
