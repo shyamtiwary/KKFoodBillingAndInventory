@@ -162,21 +162,21 @@ const Bills = () => {
 
   const handleExportAllData = async () => {
     const products = await productManager.getAll();
-    const productsCsvHeader = "ID,SKU,Name,Category,Price,Stock,Low Stock Threshold\n";
+    const productsCsvHeader = "ID,Name,Price,Stock,Low Stock Threshold\n";
     const productsCsvRows = products
       .map(
-        (p) => `${p.id},${p.sku},${p.name},${p.category},${p.sellPrice},${p.stock},${p.lowStockThreshold}`
+        (p) => `${p.id},${p.name},${p.sellPrice},${p.stock},${p.lowStockThreshold}`
       )
       .join("\n");
     const productsCsv = productsCsvHeader + productsCsvRows;
     const productsFileName = `inventory-${new Date().toISOString().split('T')[0]}.csv`;
     await downloadFile(productsFileName, productsCsv, "text/csv");
 
-    const billsCsvHeader = "Bill Number,Customer Name,Customer Email,Date,Subtotal,Discount,Tax,Total,Status\n";
+    const billsCsvHeader = "Bill Number,Customer Name,Date,Subtotal,Discount,Tax,Total,Status\n";
     const billsCsvRows = filteredBills
       .map(
         (bill) =>
-          `${bill.billNumber},${bill.customerName},${bill.customerEmail},${bill.date},${bill.subtotal},${bill.discountAmount || 0},${bill.tax},${bill.total},${bill.status}`
+          `${bill.billNumber},${bill.customerName},${bill.date},${bill.subtotal},${bill.discountAmount || 0},${bill.tax},${bill.total},${bill.status}`
       )
       .join("\n");
     const billsCsv = billsCsvHeader + billsCsvRows;
@@ -268,7 +268,6 @@ const Bills = () => {
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(bill.customerName, 14, 72);
-    doc.text(bill.customerEmail, 14, 78);
 
     // Table
     const tableData = bill.items.map((item) => [
@@ -333,8 +332,8 @@ const Bills = () => {
 
   const handleDeleteClick = (bill: Bill, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent row click
-    if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-      toast.error("Only admins and managers can delete bills");
+    if (!user || user.role !== 'admin') {
+      toast.error("Only admins can delete bills");
       return;
     }
 
@@ -425,8 +424,7 @@ const Bills = () => {
   const filteredBills = bills.filter(
     (bill) =>
       bill.billNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bill.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bill.customerEmail.toLowerCase().includes(searchQuery.toLowerCase())
+      bill.customerName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -521,6 +519,7 @@ const Bills = () => {
             <table className="w-full min-w-[800px]">
               <thead>
                 <tr className="border-b">
+                  <th className="text-left py-3 px-4 font-semibold">S.No</th>
                   <th className="text-left py-3 px-4 font-semibold">Bill #</th>
                   <th className="text-left py-3 px-4 font-semibold">Customer</th>
                   <th className="text-left py-3 px-4 font-semibold">Date & Time</th>
@@ -533,7 +532,7 @@ const Bills = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredBills.map((bill) => {
+                {filteredBills.map((bill, index) => {
                   const advance = bill.amountPaid !== undefined ? bill.amountPaid : (bill.status === 'paid' ? bill.total : 0);
                   const pending = bill.total - advance;
 
@@ -543,6 +542,7 @@ const Bills = () => {
                       className={`border-b transition-colors cursor-pointer ${bill.isDeleted ? 'bg-red-50 hover:bg-red-100 opacity-70' : 'hover:bg-muted/50'}`}
                       onClick={() => setSelectedBill(bill)}
                     >
+                      <td className="py-3 px-4 font-mono text-sm">{index + 1}</td>
                       <td className="py-3 px-4">
                         <span className="font-mono font-semibold">{bill.billNumber}</span>
                         {bill.isDeleted && <Badge variant="destructive" className="ml-2 text-[10px] h-5">DELETED</Badge>}
@@ -551,7 +551,6 @@ const Bills = () => {
                         <div>
                           <p className="font-medium">{bill.customerName}</p>
                           <p className="text-sm text-muted-foreground">{bill.customerMobile}</p>
-                          <p className="text-sm text-muted-foreground">{bill.customerEmail}</p>
                         </div>
                       </td>
                       <td className="py-3 px-4 text-muted-foreground">
@@ -588,7 +587,7 @@ const Bills = () => {
                           <Button variant="ghost" size="sm" onClick={(e) => handleDownloadPDF(bill, e)} title="Download PDF">
                             <Download className="h-4 w-4" />
                           </Button>
-                          {(user?.role === 'admin' || user?.role === 'manager') && !bill.isDeleted && (
+                          {user?.role === 'admin' && !bill.isDeleted && (
                             <Button variant="ghost" size="sm" onClick={(e) => handleDeleteClick(bill, e)} title="Delete Bill" className="text-destructive hover:text-destructive">
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -688,7 +687,6 @@ const Bills = () => {
                 <div>
                   <p className="font-semibold">Customer:</p>
                   <p>{selectedBill.customerName}</p>
-                  <p className="text-muted-foreground">{selectedBill.customerEmail}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">Date:</p>

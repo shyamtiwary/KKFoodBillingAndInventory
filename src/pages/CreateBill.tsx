@@ -149,6 +149,19 @@ const CreateBill = () => {
       const total = calculateTotal();
       const actualAmountPaid = paymentStatus === 'paid' ? total : (parseFloat(amountPaid) || 0);
 
+      if (actualAmountPaid < total) {
+        if (!customerName.trim()) {
+          toast.error("Customer name is mandatory for unpaid/partial bills");
+          setIsSubmitting(false);
+          return;
+        }
+        if (!customerMobile.trim() || customerMobile.trim().length < 10) {
+          toast.error("Valid customer mobile number (min 10 digits) is mandatory for unpaid/partial bills");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const newBill = {
         id: Date.now().toString(),
         billNumber: await billManager.generateBillNumber(),
@@ -236,11 +249,15 @@ const CreateBill = () => {
               <CardHeader><CardTitle>Customer Information</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="customerMobile">Mobile Number (Unique ID)</Label>
+                  <Label htmlFor="customerMobile">
+                    Mobile Number (Unique ID) {paymentStatus === 'unpaid' && (calculateTotal() - (parseFloat(amountPaid) || 0) > 0) && <span className="text-destructive">*</span>}
+                  </Label>
                   <Input id="customerMobile" value={customerMobile} onChange={(e) => setCustomerMobile(e.target.value)} placeholder="9876543210" />
                 </div>
                 <div>
-                  <Label htmlFor="customerName">Customer Name</Label>
+                  <Label htmlFor="customerName">
+                    Customer Name {paymentStatus === 'unpaid' && (calculateTotal() - (parseFloat(amountPaid) || 0) > 0) && <span className="text-destructive">*</span>}
+                  </Label>
                   <Popover open={customerSearchOpen} onOpenChange={setCustomerSearchOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -297,10 +314,6 @@ const CreateBill = () => {
                       </Command>
                     </PopoverContent>
                   </Popover>
-                </div>
-                <div>
-                  <Label htmlFor="customerEmail">Email (Optional)</Label>
-                  <Input id="customerEmail" type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="john@example.com" />
                 </div>
                 {customerBalance !== null && (
                   <div className={`p-3 rounded-md ${customerBalance > 0 ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>

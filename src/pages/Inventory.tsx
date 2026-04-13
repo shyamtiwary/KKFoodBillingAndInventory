@@ -63,9 +63,7 @@ const Inventory = () => {
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchQuery.toLowerCase());
+      product.name.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchesSearch) return false;
 
@@ -200,11 +198,11 @@ const Inventory = () => {
   };
 
   const handleExportInventoryCSV = async () => {
-    const csvHeader = "ID,SKU,Name,Category,Cost Price (₹),Sell Price (₹),Stock (in Kgs),Low Stock Threshold\n";
+    const csvHeader = "ID,Name,Cost Price (₹),Sell Price (₹),Stock (in Kgs),Low Stock Threshold\n";
     const csvRows = products
       .map(
         (p) =>
-          `${p.id},${p.sku},${p.name},${p.category},${p.costPrice},${p.sellPrice},${p.stock},${p.lowStockThreshold}`
+          `${p.id},${p.name},${p.costPrice},${p.sellPrice},${p.stock},${p.lowStockThreshold}`
       )
       .join("\n");
 
@@ -224,13 +222,12 @@ const Inventory = () => {
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 30);
 
     // Table
-    const tableColumn = ["SKU", "Name", "Category", "Cost Price (₹)", "Sell Price (₹)", "Stock (in Kgs)", "Status"];
-    const tableRows = products.map(product => {
+    const tableColumn = ["S.No", "Name", "Cost Price (₹)", "Sell Price (₹)", "Stock (in Kgs)", "Status"];
+    const tableRows = products.map((product, index) => {
       const status = getStockStatus(product).label;
       return [
-        product.sku,
+        (index + 1).toString(),
         product.name,
-        product.category,
         product.costPrice.toString(),
         product.sellPrice.toString(),
         product.stock.toString(),
@@ -294,7 +291,7 @@ const Inventory = () => {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search products by name, SKU, or category..."
+                placeholder="Search products by name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -318,9 +315,8 @@ const Inventory = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-semibold">SKU</th>
+                  <th className="text-left py-3 px-4 font-semibold">S.No</th>
                   <th className="text-left py-3 px-4 font-semibold">Product Name</th>
-                  <th className="text-left py-3 px-4 font-semibold">Category</th>
                   <th className="text-right py-3 px-4 font-semibold">Cost Price (₹)</th>
                   <th className="text-right py-3 px-4 font-semibold">Selling Price (₹)</th>
                   <th className="text-right py-3 px-4 font-semibold">Stock (in Kgs)</th>
@@ -330,15 +326,14 @@ const Inventory = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.map((product) => {
+                {filteredProducts.map((product, index) => {
                   const stockStatus = getStockStatus(product);
                   return (
                     <tr key={product.id} className={`border-b hover:bg-muted/50 transition-colors ${product.isDeleted ? 'opacity-50 bg-muted/20' : ''}`}>
-                      <td className="py-3 px-4">
-                        <span className="font-mono text-sm">{product.sku}</span>
+                      <td className="py-3 px-4 font-mono text-sm">
+                        {index + 1}
                       </td>
                       <td className="py-3 px-4 font-medium">{product.name}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{product.category}</td>
                       <td className="py-3 px-4 text-right font-semibold">
                         ₹{formatAmount(product.costPrice)}
                       </td>
@@ -399,7 +394,7 @@ const Inventory = () => {
               {filteredProducts.length > 0 && (
                 <tfoot className="border-t-2 border-muted bg-muted/20 font-semibold">
                   <tr>
-                    <td colSpan={3} className="py-3 px-4 text-right">Total Inventory Value:</td>
+                    <td colSpan={2} className="py-3 px-4 text-right">Total Inventory Value:</td>
                     <td className="py-3 px-4 text-right text-primary">₹{formatAmount(filteredProducts.reduce((sum, p) => sum + (p.costPrice * p.stock), 0))}</td>
                     <td className="py-3 px-4 text-right text-primary">₹{formatAmount(filteredProducts.reduce((sum, p) => sum + (p.sellPrice * p.stock), 0))}</td>
                     <td className="py-3 px-4 text-right text-primary">{formatQuantity(filteredProducts.reduce((sum, p) => sum + p.stock, 0))}</td>
@@ -513,15 +508,6 @@ const Inventory = () => {
                   value={editingProduct.name}
                   onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
                   placeholder="e.g., Wireless Mouse"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-sku">SKU</Label>
-                <Input
-                  id="edit-sku"
-                  value={editingProduct.sku}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value })}
-                  placeholder="e.g., WM-001"
                 />
               </div>
 

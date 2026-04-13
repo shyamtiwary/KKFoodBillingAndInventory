@@ -267,7 +267,6 @@ const Dashboard = () => {
                   >
                     <div>
                       <p className="font-medium">{product.name}</p>
-                      <p className="text-sm text-muted-foreground">{product.sku}</p>
                     </div>
                     <Badge variant="outline" className="text-warning border-warning">
                       {formatQuantity(product.stock)} left

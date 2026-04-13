@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 
 const Customers = () => {
+    const { user } = useAuth();
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [isLoading, setIsLoading] = useState(true);
@@ -85,6 +87,10 @@ const Customers = () => {
     };
 
     const handleDeleteCustomer = async () => {
+        if (!user || user.role !== 'admin') {
+            toast.error("Only admins can delete customers");
+            return;
+        }
         if (!customerToDelete) return;
 
         setIsDeleting(true);
@@ -168,9 +174,9 @@ const Customers = () => {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>S.No</TableHead>
                                     <TableHead>Name</TableHead>
                                     <TableHead>Mobile</TableHead>
-                                    <TableHead>Email</TableHead>
                                     <TableHead>Created At</TableHead>
                                     <TableHead className="text-right">Balance</TableHead>
                                     <TableHead className="text-center">Status</TableHead>
@@ -191,11 +197,11 @@ const Customers = () => {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    filteredCustomers.map((customer) => (
+                                    filteredCustomers.map((customer, index) => (
                                         <TableRow key={customer.id} className={customer.isDeleted ? 'opacity-50 bg-muted/20' : ''}>
+                                            <TableCell className="font-mono text-sm">{index + 1}</TableCell>
                                             <TableCell className="font-medium">{customer.name}</TableCell>
                                             <TableCell>{customer.mobile}</TableCell>
-                                            <TableCell>{customer.email}</TableCell>
                                             <TableCell className="text-sm text-muted-foreground">
                                                 {customer.createdAt ? (
                                                     <>
@@ -277,14 +283,16 @@ const Customers = () => {
                                                                     </DialogFooter>
                                                                 </DialogContent>
                                                             </Dialog>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => setCustomerToDelete(customer)}
-                                                                className="text-destructive hover:text-destructive"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
+                                                            {user?.role === 'admin' && (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => setCustomerToDelete(customer)}
+                                                                    className="text-destructive hover:text-destructive"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>
